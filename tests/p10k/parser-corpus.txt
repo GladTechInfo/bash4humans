@@ -1,0 +1,67 @@
+# Command lines for unit-parser.sh (parsed only, never run).
+ls
+ls -l /tmp
+sudo ls
+sudo -u root ls -l
+sudo -Eu root kubectl get pods
+sudo --user=root ls
+sudo --user root ls
+nice -n 5 make
+nice -10 make
+command -v git
+builtin echo hi
+exec -a name prog
+env FOO=1 bar
+FOO=1 BAR=2 baz
+x=1
+arr=(a b c)
+a | b | c
+a && b || c; d & e
+a |& b
+(a; b)
+{ a; b }
+{ a } always { b }
+if true; then echo yes; elif false; then x; else y; fi
+while read l; do echo $l; done
+for i in 1 2; do echo $i; done
+case x in a) b;; c) d;; esac
+[[ -f x ]] && cat x
+(( i++ )) && echo
+echo $(pwd) `id` "$(whoami)"
+diff <(ls a) <(ls b)
+cat > out.txt < in.txt
+ls 2>/dev/null
+ls 2>&1 | less
+cmd >> log 2>&1
+time make
+noglob find . -name *.c
+k get pods
+s kubectl get ns
+g status
+ll
+f() { a; }
+echo "a b" 'c d' $'e\tf'
+kubectl # comment here
+a; # comment
+cat <<END\nhello\nEND\nls
+x=$(git rev-parse HEAD) make
+/usr/bin/kubectl get pods
+./script.sh
+"quoted cmd" arg
+'single' arg
+\ls
+coproc foo
+! grep x
+- ls
+nohup ./run &
+ssh-agent -a sock bash
+stdbuf -o0 cat
+doas -u root ls
+pkexec --user root ls
+$EDITOR file
+"$EDITOR" file
+${EDITOR} file
+echo ${#x} $x
+a\nb\nc
+sudo -u root -- vim x
+sudo {fd}>log ls

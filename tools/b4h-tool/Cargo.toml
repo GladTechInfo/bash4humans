@@ -1,0 +1,16 @@
+[package]
+name = "b4h-tool"
+version = "0.2.0"
+edition = "2021"
+description = "Helper for bash4humans: zmv-style bulk rename and 'did you mean' suggestions"
+license = "MIT"
+
+[dependencies]
+# Pattern matching for `b4h-tool mv`: globs are translated into a regex.
+regex = { version = "1.13", default-features = false, features = ["std", "perf", "unicode-perl"] }
+
+[profile.release]
+opt-level = "s"     # small binary: it is copied to remote hosts by `b4h ssh`
+lto = true
+strip = true
+panic = "abort"

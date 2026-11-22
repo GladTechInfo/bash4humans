@@ -1,0 +1,7 @@
+# build output of the Rust helper
+tools/b4h-tool/target/
+
+# working notes of the development sessions (they name the test machines);
+# they stay on the developer's disk
+docs/handover-*.md
+docs/*.bak-*

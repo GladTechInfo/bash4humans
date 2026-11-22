@@ -1,0 +1,24 @@
+#!/bin/bash
+# tests/p10k/gs-hold [SECONDS] : pause the gitstatusd daemons of the calling
+# terminal's session (SIGSTOP), so that the shell's next request is answered
+# late; resume them after SECONDS (default 10, the end of any test). Used by
+# tests/p10k/async.sh to show p10k's LOADING state and the redraw that follows.
+# Prints nothing: the screen is compared with real p10k.
+# The whole process group is paused: in zsh, gitstatusd's parent (a zsh
+# helper of gitstatus.plugin.zsh) resumes a child that is stopped alone.
+secs=${1:-10}
+sid=$(ps -o sid= -p "$PPID" | tr -d ' ')
+pgids=''
+for pid in $(pgrep -s "$sid" gitstatusd); do
+  g=$(ps -o pgid= -p "$pid" | tr -d ' ')
+  # never the shell's own group: there (bash) the daemon alone is paused
+  if [[ $g == "$sid" ]]; then pgids+=" $pid"
+  elif [[ -n $g && " $pgids " != *" -$g "* ]]; then pgids+=" -$g"
+  fi
+done
+[[ -n $pgids ]] || exit 0
+# shellcheck disable=SC2086
+kill -STOP -- $pgids
+# a detached timer: no job-control messages in either shell
+setsid -f sh -c "sleep $secs; kill -CONT -- $pgids" >/dev/null 2>&1 </dev/null
+exit 0

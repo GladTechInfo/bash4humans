@@ -1,0 +1,8 @@
+#!/bin/sh
+# tests/p10k/fake/gcloud : gcloud for tests/p10k/async.sh. The configuration
+# is answered at once; the project name (a network call in real gcloud)
+# comes after FAKE_DELAY seconds (default 1.5).
+case "$1 $2" in
+  "config configurations") printf 'me@example.com\001my-proj\n' ;;
+  "projects describe") sleep "${FAKE_DELAY:-1.5}"; echo "My Project" ;;
+esac

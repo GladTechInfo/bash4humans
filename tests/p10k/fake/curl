@@ -1,0 +1,6 @@
+#!/bin/sh
+# tests/p10k/fake/curl : a slow public-IP service for tests/p10k/async.sh.
+# The answer comes after FAKE_DELAY seconds (default 1.5), so the prompt is
+# already on the screen and must be redrawn when it arrives.
+sleep "${FAKE_DELAY:-1.5}"
+echo 203.0.113.7

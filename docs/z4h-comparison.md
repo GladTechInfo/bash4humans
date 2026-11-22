@@ -1,0 +1,135 @@
+# zsh4humans and bash4humans: what each has
+
+Compared 2026-11-22. zsh4humans: `romkatv/zsh4humans` branch `v5` (c0c29f9, 2026-05-01),
+read in `~/src/zsh4humans` (main.zsh, fn/*, .zshrc, README.md, tips.md). bash4humans: this
+repository, as integrated on 2026-11-22.
+
+Status: **same** = equivalent behaviour; **partial** = present but less; **missing** = not in
+b4h; **n/a** = specific to zsh/macOS/iTerm2, nothing to port; **b4h+** = b4h has more.
+
+## 1. Components (what z4h installs by default)
+
+| z4h | b4h | Status |
+|---|---|---|
+| zsh-autosuggestions | ble.sh suggestions (Right/Ctrl+F accept; `B4H_SUGGEST_ACCEPT` = z4h's `forward-char`) | same |
+| zsh-syntax-highlighting | ble.sh highlighting | same |
+| zsh-history-substring-search | ble.sh / readline `history-substring-search` on Up/Down | same |
+| zsh-completions | bash-completion (system copy or pinned) | same in kind |
+| fzf | fzf (system or pinned) | same |
+| powerlevel10k | `lib/p10k` (port, checked against p10k) | same |
+| systemd completions | come with systemd's bash completion | same |
+| terminfo (ships terminfo entries, also to SSH hosts) | — | missing |
+| tmux ("integrated tmux": screen contents for prompt-at-bottom, clear screen) | `B4H_START_TMUX` starts plain tmux only | partial |
+| generated completions: bw, cargo, gh, helm, kitty, kubectl, oc, rustup | only what bash-completion / the tools provide | partial |
+
+## 2. Plugins
+
+| z4h | b4h | Status |
+|---|---|---|
+| `z4h install user/repo` (any GitHub repo, kept up to date) | — | missing |
+| `z4h load` / `z4h source` (Oh My Zsh plugins, any file) | `B4H_PLUGINS=()`, own `~/.config/bash4humans/plugins/*.plugin.bash` | partial |
+| compatibility fixes for Oh My Zsh, forgit, fz, zsh-you-should-use | — | n/a (zsh plugins) |
+| — | bundled: extract, colored-man-pages, zoxide, ssh-agent, git-aliases, cht; `b4h plugins list/search/enable/disable` | b4h+ |
+
+## 3. Installation and maintenance
+
+| z4h | b4h | Status |
+|---|---|---|
+| installer: keymap, tmux, rc backup, chsh; needs no git, zsh or sudo | `install.sh`: keymap, line editor, tmux, direnv, rc backup, chsh; needs git (or `B4H_SOURCE`) | partial (git) |
+| vi keymap: installer refuses (manual `bindkey -v`) | `B4H_KEYMAP=vi` supported | b4h+ |
+| auto-update ask / days; `z4h update` | `B4H_AUTO_UPDATE`, `B4H_AUTO_UPDATE_DAYS`; `b4h update` | same |
+| `z4h compile`, orphan .zwc check | — | n/a (zsh) |
+| try in Docker (one command) | — | missing (minor) |
+| welcome message | — | missing (minor) |
+| — | `b4h doctor`, `b4h version` | b4h+ |
+
+## 4. Key bindings (z4h defaults, PC keyboard)
+
+| Key | z4h | b4h | Status |
+|---|---|---|---|
+| Up/Down, Ctrl+P/N | history containing what is typed (this session first: "local") | substring search (shared history) | partial: no local/global split |
+| Ctrl+Up/Down | global prefix history (all sessions) | — | missing |
+| Home/End, Ctrl+Home/End, Alt+Home/End | line / buffer start-end | ble.sh defaults | same |
+| Ctrl+Left/Right, Alt+B/F | word left/right | same | same |
+| Ctrl+Shift+Left/Right, Ctrl+Shift+Del | shell-word (zword) move/delete | — (Ctrl+Alt+BS only) | partial |
+| Alt+D, Ctrl+Del, Alt+Del | delete word right | Ctrl+Del; Alt+D readline/ble default | same |
+| Ctrl+W, Alt+BS, Ctrl+Alt+BS, Ctrl+BS, Ctrl+H | delete word left (Ctrl+Alt+BS: shell word) | same set | same |
+| Alt+K | delete to line start | — (Ctrl+U does it) | partial |
+| Alt+J | clear the whole buffer | — | missing |
+| Alt+O | stash the line, run it later (z4h-stash-buffer) | — | missing |
+| Alt+M | accept the whole suggestion | — (Right, Ctrl+F, End) | missing |
+| Ctrl+/ , Shift+Tab / Alt+/ | undo / redo | same | same |
+| Ctrl+Space | expand aliases, globs, parameters in place | — | missing |
+| Tab | fzf completion (Ctrl+Space multi-select, Ctrl+A all, `recurse-dirs`, `fzf-bindings`) | ble.sh menu; `B4H_TAB=fzf` for fzf | partial |
+| Ctrl+R | fzf history (optional preview) | fzf history | same |
+| Alt+H | run-help | manual page | same |
+| Alt+Left/Right/Up/Down (Shift+ on macOS) | cd back / forward / up / pick subdirectory | same | same |
+| Alt+R | fzf over persistent directory history | `cdh` command (this session only), no key | partial |
+| Ctrl+L / Ctrl+Alt+L | soft clear (scrollback kept) / hard clear, prompt at top or bottom | clear-screen | partial |
+| macOS keyboard layout (`keyboard mac`) | — | n/a here |
+| — | Alt+S toggle sudo, Ctrl+T files, Alt+C cd (fzf) | b4h+ |
+
+## 5. Directories
+
+| z4h | b4h | Status |
+|---|---|---|
+| persistent directory history (survives the shell; `cd -<Tab>`; `dir-history` max-size) | back/forward stacks per session; `dirh`, `prevd`, `nextd`, `cdh` | partial: not persistent |
+| auto_cd | `autocd` | same |
+| `propagate-cwd` (new tmux pane / tab opens in the same directory) | OSC 7 (terminals); nothing for tmux | partial |
+| OSC 9;9 for Windows Terminal (WSL) | — | missing |
+
+## 6. History
+
+| z4h | b4h | Status |
+|---|---|---|
+| unlimited, shared between shells | same (`HISTSIZE=-1`, history_share) | same |
+| local (session) vs global history widgets | one shared list | missing |
+| `preserve-trailing-whitespace` | — | missing (minor) |
+| — | timestamps, `histdel`, `b4h private` (no history) | b4h+ |
+
+## 7. SSH ("teleportation")
+
+| z4h | b4h | Status |
+|---|---|---|
+| automatic on plain `ssh HOST`, per host (`:z4h:ssh:HOST enable`) | explicit `b4h ssh HOST` | partial |
+| works without zsh on the host (it brings zsh) | needs bash 5 on the host | partial |
+| `send-extra-files` | `B4H_SSH_SEND_FILES` (+ rc file, prompt config) | same |
+| `retrieve-history` / `retrieve-extra-files` (history back from the host, shared between hosts) | — | missing |
+| `configure` hook, `ssh-command`, `term` per host | — | missing |
+| terminfo sent along | — | missing |
+
+## 8. Terminal integration and environment
+
+| z4h | b4h | Status |
+|---|---|---|
+| `term-shell-integration` (OSC 133) | same (p10k's TERM_SHELL_INTEGRATION, on) | same |
+| OSC 7 current directory | same | same |
+| title: configurable, while idle and while a command runs (local / ssh) | `B4H_TITLE`: fixed user@host: dir, while idle only | partial |
+| `prompt-at-bottom` | — | missing |
+| `term-vresize` (redraw on vertical resize) | — | missing |
+| clipboard: `x`, `c`, `v` (copy/paste, also over SSH) | — | missing |
+| `-z4h-fix-locale` (pick a UTF-8 locale when none is set) | — | missing |
+| WSL: `$z4h_win_home`, `~w` | — | missing (no named dirs in bash; a variable is possible) |
+| macOS: Homebrew paths, iTerm2 integration | — | n/a here |
+| LS_COLORS, LESS, TREE_COLORS | LS_COLORS (dircolors), LESS, PAGER | partial (TREE_COLORS) |
+| GPG_TTY | same | same |
+| ssh-agent (`:z4h:ssh-agent: start`) | `ssh-agent` plugin | same |
+| direnv (+ `notify` on/off) | `B4H_DIRENV` | partial (no notify option) |
+| command-not-found handler | same, plus "did you mean" and the package | b4h+ |
+| `z4h sudo` (root shell with your config and TERM), `z4h docker`, `z4h tty-wait` | `sudo -Es` works by hand | missing |
+| `zmv` | `zmv` (b4h-tool) | same |
+| — | fish: `abbr`, `funced`/`funcsave`, `add_path`, `histdel`; zsh: `alias_suffix`; notification after long commands | b4h+ |
+
+## 9. Gaps, roughly by value
+
+1. Persistent directory history + Alt+R (fzf over it) - daily use.
+2. Keys: Alt+M (accept suggestion), Alt+O (stash line), Alt+J (clear buffer), Ctrl+Space
+   (expand), Ctrl+Shift+Left/Right/Del (shell words), Ctrl+Up/Down (global history).
+3. Clipboard `x` / `c` / `v` (OSC 52 over SSH).
+4. Title while a command runs; configurable title format.
+5. Local vs global history (needs a per-session list in bash).
+6. Locale fix-up (UTF-8 when none is set).
+7. SSH: automatic per-host teleportation, history retrieval, terminfo.
+8. Tab: fzf completion with multi-select / recurse-dirs as z4h's (B4H_TAB=fzf is simpler).
+9. Plugins from any GitHub repository (`b4h install user/repo`).
+10. prompt-at-bottom and soft/hard clear (z4h needs its integrated tmux for these).

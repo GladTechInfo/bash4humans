@@ -1,0 +1,36 @@
+# ~/.bashrc - bash4humans  (https://github.com/GladTechInfo/bash4humans)
+#
+# Settings first, then bash4humans is loaded, then your own additions.
+# All settings with their defaults: ~/.cache/bash4humans/b4h/lib/settings.bash
+# Open a new shell (or: exec bash) after changing anything here.
+
+# ---------------------------------------------------------------- settings ---
+B4H_KEYMAP=emacs               # emacs (standard keys) | vi
+B4H_LINE_EDITOR=ble             # ble: suggestions, highlighting, menus | readline: plain bash editing
+B4H_GREETING=''                 # command run when a shell starts, e.g. 'fastfetch'
+B4H_AUTO_UPDATE=ask             # ask: offer `b4h update` every 28 days | no
+B4H_START_TMUX=no               # yes: every terminal runs inside tmux
+B4H_DIRENV=no                   # yes: load .envrc files with direnv
+B4H_PLUGINS=()                  # extras: b4h plugins (e.g. extract git-aliases zoxide cht)
+B4H_TAB=menu                    # TAB shows ble.sh's menu (menu) or an fzf picker (fzf)
+B4H_SUGGEST_ACCEPT=all          # Right arrow takes the whole suggestion (all) or one word (word)
+B4H_SHELL_INTEGRATION=yes       # tell the terminal the directory and where prompts are
+B4H_SHELL_INTEGRATION_EXCEPT='' # SSH client addresses whose terminal shows those codes as text
+B4H_SSH_SEND_FILES=(~/.nanorc)  # also copied by `b4h ssh HOST` (never overwrites the host's own)
+
+# --------------------------------------------------------------- bootstrap ---
+B4H_HOME=${B4H_HOME:-$HOME/.cache/bash4humans}
+if [[ $- == *i* && ! -r $B4H_HOME/b4h/b4h.bash ]] && command -v git >/dev/null; then
+  git clone -q --depth 1 https://github.com/GladTechInfo/bash4humans.git "$B4H_HOME/b4h"
+fi
+[[ -r $B4H_HOME/b4h/b4h.bash ]] && . "$B4H_HOME/b4h/b4h.bash"
+
+# ------------------------------------------------------------ your additions ---
+# Aliases, functions, PATH. Examples:
+#
+#   alias ls='ls -lah'
+#   abbr -a gco git checkout             # expands as you type
+#   abbr -a --position anywhere G '| grep'
+#   alias_suffix txt=nano md=less        # typing notes.txt opens it in nano
+#   add_path ~/bin
+#   md() { [[ $# == 1 ]] && mkdir -p -- "$1" && cd -- "$1"; }
