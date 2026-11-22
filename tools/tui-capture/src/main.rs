@@ -1,5 +1,5 @@
 //! tui-capture — run a TUI in a pseudo-terminal of a fixed size, feed it keys on a schedule, and
-//! save the screen at named moments as JSON, one cell = [char, fg, bg, bold, reverse].
+//! save the screen at named moments as JSON.
 //! Part of bash4humans (GPL-3.0-or-later): its tests run bash and zsh in it and compare the screens
 //! cell by cell. Written as a Rust port of a Python script based on pyte, whose JSON format it keeps.
 //!
@@ -7,9 +7,13 @@
 //!   SPEC: {"cmd": [...], "rows": 40, "cols": 133, "env": {...},
 //!          "steps": [{"wait": 3}, {"keys": "c"}, {"sh": "command"}, {"snap": "name"}, ...]}
 //!
-//! Steps: "wait" reads the TUI's output for N seconds; "keys" types text or one of <up> <down> <left>
-//! <right> <enter> <esc> <S-up> <S-down>, then reads for 0.4 s; "sh" starts a shell command in the
-//! background; "snap" saves OUTDIR/<name>.json. At the end "q" is sent, and the TUI killed after 1 s.
+//! Steps: "wait" reads the TUI's output for N seconds; "keys" types text or a named key (<up>,
+//! <enter>, <tab>, <A-left>, <C-r> …, see key_bytes), then reads for "after" seconds (0.4);
+//! "type" types text one character every "delay" seconds (0.12); "sh" starts a shell command in
+//! the background; "snap" saves OUTDIR/<name>.json; "record": "DIR" saves a frame every
+//! "interval" seconds (0.1) as OUTDIR/DIR/00001.json … (with "t", seconds) until {"stop": true}.
+//! At the end "q" is sent, and the TUI killed after 1 s.
+//! A cell: [char, fg, bg, bold, reverse, italic, underline] (pyte's five fields, then two more).
 //!
 //! Colours are written as pyte wrote them: "default"; the 16 basic
 //! colours by name ("red", "brown" for yellow, "brightblack" …); others as six hex digits.
@@ -64,7 +68,8 @@ fn colour_name(c: vt100::Color) -> String {
 //  Snapshots
 // ---------------------------------------------------------------------------
 
-/// The whole screen as pyte's JSON: {"rows", "cols", "grid": [[[ch, fg, bg, bold, reverse], …], …]}.
+/// The whole screen as pyte's JSON: {"rows", "cols", "grid": [[[ch, fg, bg, bold, reverse, italic,
+/// underline], …], …], "cursor": [row, col], "cursor_visible"}.
 fn snapshot(screen: &vt100::Screen, rows: u16, cols: u16) -> Value {
     let grid: Vec<Value> = (0..rows)
         .map(|y| {
@@ -79,29 +84,126 @@ fn snapshot(screen: &vt100::Screen, rows: u16, cols: u16) -> Value {
                         } else {
                             " "
                         };
-                        json!([ch, colour_name(c.fgcolor()), colour_name(c.bgcolor()), c.bold(), c.inverse()])
+                        // pyte's five fields first (the tests read those), then italic and underline.
+                        json!([
+                            ch,
+                            colour_name(c.fgcolor()),
+                            colour_name(c.bgcolor()),
+                            c.bold(),
+                            c.inverse(),
+                            c.italic(),
+                            c.underline()
+                        ])
                     }
-                    None => json!([" ", "default", "default", false, false]),
+                    None => json!([" ", "default", "default", false, false, false, false]),
                 })
                 .collect();
             Value::Array(line)
         })
         .collect();
-    json!({ "rows": rows, "cols": cols, "grid": grid })
+    // The cursor too (the tests ignore it; animations draw it).
+    let (cy, cx) = screen.cursor_position();
+    json!({ "rows": rows, "cols": cols, "grid": grid, "cursor": [cy, cx], "cursor_visible": !screen.hide_cursor() })
 }
 
-/// Named keys -> the bytes a terminal sends for them; anything else is typed as it is.
-fn key_bytes(k: &str) -> &str {
-    match k {
-        "<up>" => "\x1b[A",
-        "<down>" => "\x1b[B",
-        "<right>" => "\x1b[C",
-        "<left>" => "\x1b[D",
-        "<enter>" => "\r",
-        "<esc>" => "\x1b",
-        "<S-up>" => "\x1b[1;2A",
-        "<S-down>" => "\x1b[1;2B",
-        other => other,
+/// Named keys -> the bytes an xterm sends for them; anything else is typed as it is.
+///   <up> <down> <right> <left> <home> <end> <enter> <tab> <bs> <esc> <del>,
+///   with a modifier: <S-up>, <A-left>, <C-right>, <C-S-left> … (S = Shift, A = Alt, C = Ctrl),
+///   <S-tab>, and a modifier with one character: <C-r> (Ctrl+R), <A-r> (Alt+R), <C-A-x>.
+fn key_bytes(k: &str) -> String {
+    // LEARNER NOTE — returning String instead of &str
+    //   The old version handed back slices of string literals. Bytes built at run time (a Ctrl
+    //   character worked out from a letter) need an owned String, so every arm makes one.
+    let Some(inner) = k.strip_prefix('<').and_then(|s| s.strip_suffix('>')) else {
+        return k.to_string();
+    };
+    match inner {
+        "enter" => return "\r".into(),
+        "tab" => return "\t".into(),
+        "S-tab" => return "\x1b[Z".into(),
+        "bs" => return "\x7f".into(),
+        "esc" => return "\x1b".into(),
+        "del" => return "\x1b[3~".into(),
+        _ => {}
+    }
+    // Split "C-A-left" into the modifiers and the key name.
+    let mut shift = false;
+    let mut alt = false;
+    let mut ctrl = false;
+    let mut name = inner;
+    while name.len() > 2 && name.as_bytes()[1] == b'-' {
+        match &name[..1] {
+            "S" => shift = true,
+            "A" => alt = true,
+            "C" => ctrl = true,
+            _ => return k.to_string(), // not a key name: type it as text
+        }
+        name = &name[2..];
+    }
+    // xterm: CSI 1;<m><letter>, where m = 1 + Shift(1) + Alt(2) + Ctrl(4); without a modifier, CSI <letter>.
+    let arrow = match name {
+        "up" => Some('A'),
+        "down" => Some('B'),
+        "right" => Some('C'),
+        "left" => Some('D'),
+        "end" => Some('F'),
+        "home" => Some('H'),
+        _ => None,
+    };
+    if let Some(letter) = arrow {
+        let m = 1 + shift as u8 + 2 * alt as u8 + 4 * ctrl as u8;
+        return if m == 1 { format!("\x1b[{letter}") } else { format!("\x1b[1;{m}{letter}") };
+    }
+    // One character with Ctrl and/or Alt: Ctrl keeps the low five bits (r -> 0x12), Alt puts ESC first.
+    let mut chars = name.chars();
+    if let (Some(c), None, true) = (chars.next(), chars.next(), ctrl || alt) {
+        let mut s = String::new();
+        if alt {
+            s.push('\x1b');
+        }
+        if ctrl && c.is_ascii() {
+            s.push(((c.to_ascii_lowercase() as u8) & 0x1f) as char);
+        } else {
+            s.push(c);
+        }
+        return s;
+    }
+    k.to_string()
+}
+
+/// Saves a frame every `interval` seconds while the program's output is read, for animations:
+/// OUTDIR/<dir>/00001.json …, each with "t", the seconds since recording began.
+struct Recorder {
+    dir: std::path::PathBuf,
+    interval: f64,
+    start: Instant,
+    next: Instant,
+    count: u32,
+}
+
+impl Recorder {
+    /// How long until the next frame is due.
+    fn until_due(&self) -> Duration {
+        self.next.saturating_duration_since(Instant::now())
+    }
+
+    /// Saves a frame if one is due.
+    fn tick(&mut self, screen: &vt100::Screen, rows: u16, cols: u16) -> Result<(), String> {
+        let now = Instant::now();
+        if now < self.next {
+            return Ok(());
+        }
+        self.count += 1;
+        let mut frame = snapshot(screen, rows, cols);
+        frame["t"] = json!((now - self.start).as_secs_f64());
+        let path = self.dir.join(format!("{:05}.json", self.count));
+        std::fs::write(&path, frame.to_string()).map_err(|e| format!("{}: {e}", path.display()))?;
+        // The next frame is due one interval later; after a long stall, start again from now.
+        self.next += Duration::from_secs_f64(self.interval);
+        if self.next < now {
+            self.next = now + Duration::from_secs_f64(self.interval);
+        }
+        Ok(())
     }
 }
 
@@ -160,40 +262,75 @@ fn run() -> Result<(), String> {
 
     let size = |n: u16| NonZeroU16::new(n).ok_or("rows and cols must not be 0");
     let mut term = vt100::Parser::new(size(rows)?, size(cols)?, 0);
-    // Feed the TUI's output to the emulator for `seconds`.
-    let pump = |term: &mut vt100::Parser, seconds: f64| {
+    // Feed the TUI's output to the emulator for `seconds`, saving frames when recording.
+    // LEARNER NOTE — a closure that borrows
+    //   `pump` reads `rx` from its surroundings (a closure "captures" it); the terminal and the
+    //   recorder are passed in, because the loop below also uses them between calls.
+    let pump = |term: &mut vt100::Parser, rec: &mut Option<Recorder>, seconds: f64| -> Result<(), String> {
         let end = Instant::now() + Duration::from_secs_f64(seconds);
         while let Some(left) = end.checked_duration_since(Instant::now()) {
-            match rx.recv_timeout(left) {
+            let wait = match rec {
+                Some(r) => left.min(r.until_due()),
+                None => left,
+            };
+            match rx.recv_timeout(wait) {
                 Ok(data) => term.process(&data),
-                Err(mpsc::RecvTimeoutError::Timeout) => break,
+                Err(mpsc::RecvTimeoutError::Timeout) => {
+                    if rec.is_none() {
+                        break; // nothing more within `left`
+                    }
+                }
                 Err(mpsc::RecvTimeoutError::Disconnected) => break, // the TUI has exited
             }
+            if let Some(r) = rec {
+                r.tick(term.screen(), rows, cols)?;
+            }
         }
+        Ok(())
     };
+    let mut rec: Option<Recorder> = None;
 
     for step in spec["steps"].as_array().ok_or("spec: steps missing")? {
         if let Some(s) = step["wait"].as_f64() {
-            pump(&mut term, s);
+            pump(&mut term, &mut rec, s)?;
         } else if let Some(k) = step["keys"].as_str() {
             writer.write_all(key_bytes(k).as_bytes()).map_err(|e| e.to_string())?;
             writer.flush().map_err(|e| e.to_string())?;
-            pump(&mut term, 0.4);
+            pump(&mut term, &mut rec, step["after"].as_f64().unwrap_or(0.4))?;
+        } else if let Some(text) = step["type"].as_str() {
+            // Typed one character at a time, as a person would ("delay" seconds apart).
+            let delay = step["delay"].as_f64().unwrap_or(0.12);
+            for c in text.chars() {
+                writer.write_all(c.to_string().as_bytes()).map_err(|e| e.to_string())?;
+                writer.flush().map_err(|e| e.to_string())?;
+                pump(&mut term, &mut rec, delay)?;
+            }
+        } else if let Some(dir) = step["record"].as_str() {
+            let dir = std::path::Path::new(outdir).join(dir);
+            std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+            let now = Instant::now();
+            let interval = step["interval"].as_f64().unwrap_or(0.1);
+            rec = Some(Recorder { dir, interval, start: now, next: now, count: 0 });
+        } else if step["stop"].as_bool() == Some(true) {
+            rec = None;
         } else if let Some(sh) = step["sh"].as_str() {
             std::process::Command::new("sh").arg("-c").arg(sh).spawn().map_err(|e| format!("sh: {e}"))?;
         } else if let Some(name) = step["snap"].as_str() {
-            pump(&mut term, 0.05);
+            pump(&mut term, &mut rec, 0.05)?;
             let path = std::path::Path::new(outdir).join(format!("{name}.json"));
             std::fs::write(&path, snapshot(term.screen(), rows, cols).to_string())
                 .map_err(|e| format!("{}: {e}", path.display()))?;
             eprintln!("snap {name}");
+        } else {
+            return Err(format!("spec: unknown step {step}"));
         }
     }
 
     // Ask the TUI to quit, give it a second, then make sure it is gone.
     let _ = writer.write_all(b"q");
     let _ = writer.flush();
-    pump(&mut term, 1.0);
+    rec = None;
+    let _ = pump(&mut term, &mut rec, 1.0);
     let _ = child.kill();
     Ok(())
 }
@@ -221,5 +358,20 @@ mod tests {
         assert_eq!(colour_name(vt100::Color::Idx(3)), "brown");
         assert_eq!(colour_name(vt100::Color::Idx(13)), "brightmagenta");
         assert_eq!(colour_name(vt100::Color::Rgb(255, 135, 0)), "ff8700");
+    }
+
+    #[test]
+    fn key_names() {
+        assert_eq!(key_bytes("<up>"), "\x1b[A");
+        assert_eq!(key_bytes("<S-up>"), "\x1b[1;2A");
+        assert_eq!(key_bytes("<S-down>"), "\x1b[1;2B");
+        assert_eq!(key_bytes("<A-left>"), "\x1b[1;3D");
+        assert_eq!(key_bytes("<C-right>"), "\x1b[1;5C");
+        assert_eq!(key_bytes("<C-r>"), "\x12");
+        assert_eq!(key_bytes("<A-r>"), "\x1br");
+        assert_eq!(key_bytes("<tab>"), "\t");
+        assert_eq!(key_bytes("<S-tab>"), "\x1b[Z");
+        assert_eq!(key_bytes("ls -l"), "ls -l");
+        assert_eq!(key_bytes("<b>"), "<b>");
     }
 }

@@ -1,0 +1,14 @@
+{
+  "about": "B: one still per style (shots.sh runs this once for each of lean, classic, rainbow, pure). The same repository state each time: a modified and an untracked file.",
+  "style": "each",
+  "cwd": "projects/webapp",
+  "prep": ["echo 'See docs/ for more.' >> README.md", "echo 'pub fn logout() {}' > src/logout.rs"],
+  "rows": 9,
+  "cols": 76,
+  "steps": [
+    {"wait": 7},
+    {"type": "ls", "delay": 0.02}, {"keys": "<enter>", "after": 1.5},
+    {"type": "false", "delay": 0.02}, {"keys": "<enter>", "after": 1.5},
+    {"snap": "screen"}
+  ]
+}

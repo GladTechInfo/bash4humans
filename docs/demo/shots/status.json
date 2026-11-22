@@ -1,0 +1,21 @@
+{
+  "about": "E: a failing command (exit code on the right), a slow one (execution time), with the transient prompt on: earlier prompts shrink to one short line.",
+  "style": "rainbow",
+  "settings": ["typeset -g POWERLEVEL9K_TRANSIENT_PROMPT=always"],
+  "cwd": "projects/webapp",
+  "prep": [],
+  "rows": 12,
+  "cols": 80,
+  "steps": [
+    {"wait": 7},
+    {"record": "frames", "interval": 0.1},
+    {"wait": 1.0},
+    {"type": "ls /nonexistent", "delay": 0.1},
+    {"keys": "<enter>", "after": 1.8},
+    {"type": "sleep 3", "delay": 0.12},
+    {"keys": "<enter>", "after": 5.0},
+    {"type": "cd src", "delay": 0.12},
+    {"keys": "<enter>", "after": 2.0},
+    {"stop": true}
+  ]
+}

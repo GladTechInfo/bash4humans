@@ -1,0 +1,15 @@
+{
+  "about": "H: Ctrl+R, fuzzy search through history with fzf.",
+  "style": "lean",
+  "cwd": "projects/webapp",
+  "prep": [],
+  "rows": 10,
+  "cols": 80,
+  "steps": [
+    {"wait": 7},
+    {"keys": "<C-r>", "after": 1.5},
+    {"type": "git", "delay": 0.15},
+    {"wait": 1.0},
+    {"snap": "screen"}
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "about": "G: directory history. Alt+Left/Right go back and forward, Alt+Up to the parent, Alt+Down picks a subdirectory, Alt+R any directory visited before.",
+  "style": "pure",
+  "cwd": "projects/webapp",
+  "prep": [],
+  "rows": 14,
+  "cols": 80,
+  "steps": [
+    {"wait": 7},
+    {"type": "cd src", "delay": 0.02}, {"keys": "<enter>", "after": 1.0},
+    {"type": "cd ../docs", "delay": 0.02}, {"keys": "<enter>", "after": 1.0},
+    {"type": "cd ../tests", "delay": 0.02}, {"keys": "<enter>", "after": 1.0},
+    {"keys": "<C-l>", "after": 1.0},
+    {"record": "frames", "interval": 0.1},
+    {"wait": 1.2},
+    {"keys": "<A-left>", "after": 1.3},
+    {"keys": "<A-left>", "after": 1.3},
+    {"keys": "<A-right>", "after": 1.3},
+    {"keys": "<A-up>", "after": 1.5},
+    {"keys": "<A-down>", "after": 1.6},
+    {"type": "sr", "delay": 0.25},
+    {"wait": 0.8},
+    {"keys": "<enter>", "after": 1.5},
+    {"keys": "<A-r>", "after": 1.6},
+    {"type": "doc", "delay": 0.25},
+    {"wait": 0.8},
+    {"keys": "<enter>", "after": 2.0},
+    {"stop": true}
+  ]
+}

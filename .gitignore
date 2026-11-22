@@ -6,3 +6,4 @@ tools/b4h-tool/target/
 docs/handover-*.md
 docs/*.bak-*
 tools/tui-capture/target/
+tools/term-render/target/

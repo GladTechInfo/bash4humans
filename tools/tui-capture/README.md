@@ -14,14 +14,20 @@ zsh through it and compares the two screens cell by cell;
            "steps": [{"wait": 3}, {"keys": "ls\r"}, {"snap": "screen"}, ...]}
 
 Steps: `wait` reads the program's output for N seconds; `keys` types text
-(or one of `<up> <down> <left> <right> <enter> <esc> <S-up> <S-down>`), then
-reads for 0.4 s; `sh` starts a shell command in the background; `snap` saves
-`OUTDIR/<name>.json`. At the end `q` is sent and the program is stopped after
-a second.
+or one named key (`<up> <down> <left> <right> <home> <end> <enter> <tab> <bs>
+<esc> <del>`, with modifiers `<S-up>`, `<A-left>`, `<C-right>`, `<S-tab>`, or
+one character `<C-r>`, `<A-r>`), then reads for `after` seconds (0.4); `type`
+types text one character every `delay` seconds (0.12); `sh` starts a shell
+command in the background; `snap` saves `OUTDIR/<name>.json`; `record: DIR`
+saves a frame every `interval` seconds (0.1) as `OUTDIR/DIR/00001.json` ...
+(each with `t`, the seconds since recording began) until `{"stop": true}`.
+At the end `q` is sent and the program is stopped after a second.
 
-The JSON is pyte's format (`{"grid": [[[char, fg, bg, bold, reverse], ...], ...]}`):
-colours are `default`, the 16 basic colours by pyte's names (`brown` for
-yellow, `brightblack`, ...), others six hex digits.
+The JSON is pyte's format (`{"grid": [[[char, fg, bg, bold, reverse, italic,
+underline], ...], ...], "cursor": [row, col], "cursor_visible": true}`): pyte's
+five fields first, then two more. Colours are `default`, the 16 basic colours by
+pyte's names (`brown` for yellow, `brightblack`, ...), others six hex digits.
+`tools/term-render` turns snaps and recordings into PNG and GIF images.
 
 The program inherits tui-capture's environment: give every variable that
 changes its behaviour (`TERM`, `LANG`, `COLORTERM`, ...) in `env`.

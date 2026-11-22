@@ -1,0 +1,18 @@
+[package]
+name = "term-render"
+version = "0.1.0"
+edition = "2024"
+description = "Turns tui-capture screens (JSON) into PNG and GIF images with MesloLGS NF"
+license = "GPL-3.0-or-later"
+
+[dependencies]
+ab_glyph = "0.2.32"
+gif = "0.14.2"
+png = "0.18.1"
+serde_json = "1.0.154"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true

@@ -1,0 +1,22 @@
+{
+  "about": "A: the README's first picture. A grey suggestion from history, taken with Right; the git segment changes from !1 to +1 to an ahead count.",
+  "style": "rainbow",
+  "cwd": "projects/webapp",
+  "prep": ["echo 'See docs/ for more.' >> README.md"],
+  "rows": 10,
+  "cols": 80,
+  "steps": [
+    {"wait": 7},
+    {"record": "frames", "interval": 0.1},
+    {"wait": 1.5},
+    {"type": "git a", "delay": 0.15},
+    {"wait": 1.2},
+    {"keys": "<right>", "after": 1.0},
+    {"keys": "<enter>", "after": 1.8},
+    {"type": "git c", "delay": 0.15},
+    {"wait": 1.2},
+    {"keys": "<right>", "after": 1.0},
+    {"keys": "<enter>", "after": 2.0},
+    {"stop": true}
+  ]
+}

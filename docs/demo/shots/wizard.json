@@ -1,0 +1,18 @@
+{
+  "about": "F: b4h configure, Powerlevel10k's wizard. shots.sh replaces the \"wizard\" step with one key per question (tests/p10k/wizard-keys.sh works them out), each screen shown for \"every\" seconds.",
+  "style": "lean",
+  "cwd": "projects/webapp",
+  "prep": [],
+  "rows": 28,
+  "cols": 84,
+  "steps": [
+    {"wait": 7},
+    {"record": "frames", "interval": 0.1},
+    {"wait": 0.8},
+    {"type": "b4h configure", "delay": 0.12},
+    {"keys": "<enter>", "after": 2.5},
+    {"wizard": ["style=rainbow", "sep=1", "head=1", "tail=1", "lines=2", "frame=2", "transient=y"], "every": 1.2},
+    {"wait": 2.0},
+    {"stop": true}
+  ]
+}

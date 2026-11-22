@@ -8,6 +8,8 @@ settings, segments, wizard, instant prompt and git engine), directory history
 on Alt+arrows, plugins, and the useful parts of fish that neither bash nor zsh
 has.
 
+![bash4humans: the rainbow prompt in a git repository; typing "git a" shows the rest of "git add README.md" in grey, Right takes it, and the git segment changes from !1 (modified) to +1 (staged) and, after the commit, to ⇡1 (ahead of the remote)](docs/images/hero.gif)
+
 It is still **plain bash**. Only interactive shells change; scripts, `bash -c`,
 cron, scp and rsync see an ordinary bash, and `B4H_DISABLE=1 bash` starts one
 on demand. Everything lives in your home directory; nothing is installed
@@ -60,6 +62,21 @@ Your old startup files are copied to `~/bash-backup/<date>/`, and the old
 | **Plugins** | `extract`, `colored-man-pages`, `zoxide`, `ssh-agent`, `git-aliases`, `cht`, and your own |
 | **SSH** | `b4h ssh HOST` brings all of this to HOST for that session, without touching HOST's files |
 
+Typing: an unknown command stays red until it is complete, strings and
+variables have their own colours, an existing path is underlined, TAB
+completes it, and TAB after `--co` lists the options with their descriptions
+from the manual page:
+
+![Lean prompt: "ech" shown in red, then "echo" with a quoted string and $USER in colour; "grep -rn TODO s" completed to "src/" with TAB; then "grep --co" and TAB, a menu of --color, --colour, --context and --count, each with its description](docs/images/typing.gif)
+
+Directories and history: **Alt+Left/Right** back and forward, **Alt+Up** the
+parent, **Alt+Down** a subdirectory, **Alt+R** any directory visited before;
+**Ctrl+R** searches the history:
+
+![Pure prompt: Alt+Left and Alt+Right move between ~/projects/webapp/tests, docs and src; Alt+Up goes to webapp; Alt+Down opens a list of its subdirectories, "sr" picks src; Alt+R lists the directories visited, "doc" picks docs](docs/images/dirs.gif)
+
+![Ctrl+R: fzf lists the history entries that match "git", newest at the bottom](docs/images/history.png)
+
 ## The prompt
 
 The prompt is [Powerlevel10k](https://github.com/romkatv/powerlevel10k) itself,
@@ -71,11 +88,22 @@ segments, `custom_*`, ...), the `p10k` command (`configure`, `reload`,
 instant prompt and the terminal's prompt marks. It is checked against real p10k
 in zsh, screen cell by screen cell, by `tests/p10k/` (below).
 
+Its four styles, in the same repository (one file modified, one untracked;
+the last command failed):
+
+| Lean | Classic |
+|---|---|
+| ![Lean style: two-line prompt without backgrounds; directory, git branch with !1 ?1; the ❯ turns red after a failed command](docs/images/styles-lean.png) | ![Classic style: grey segments with angled separators and a frame; 1 ✘ on the right after a failed command](docs/images/styles-classic.png) |
+| **Rainbow** | **Pure** |
+| ![Rainbow style: blue directory and yellow git segments with a frame; a red 1 ✘ on the right after a failed command](docs/images/styles-rainbow.png) | ![Pure style: directory and "main*" in plain colours; the ❯ turns red after a failed command](docs/images/styles-pure.png) |
+
 `b4h configure` is `p10k configure`: p10k's wizard, with the same screens,
 questions and previews. It writes `~/.config/bash4humans/p10k.bash` - a p10k
 configuration (the settings of a `~/.p10k.zsh`, converted to bash), with p10k's
 comments on every setting. **Adjust it with `b4h prompt edit`** (it reloads
 when the editor closes), or run the wizard again.
+
+![b4h configure: the wizard's font checks, then the prompt style, character set, separators, heads, tails, height, frame, spacing, icons, flow, transient and instant prompt, each with previews; the answers pick a two-line rainbow prompt](docs/images/wizard.gif)
 
 `b4h configure --from-p10k [FILE]` converts an existing Powerlevel10k
 configuration (default `~/.p10k.zsh`) instead: your zsh prompt, in bash.
@@ -85,11 +113,20 @@ the prompt last seen in a directory appears at once while the rest of the shell
 loads; anything start-up prints is kept and shown afterwards (verbose: with
 p10k's warning about it).
 
+The exit code of a failed command and the time a slow one took appear on the
+right; with the **transient prompt** (`POWERLEVEL9K_TRANSIENT_PROMPT`, a wizard
+question) earlier prompts shrink to `❯ command`, so the screen keeps only what
+was run:
+
+![Rainbow prompt with transient prompt on: "ls /nonexistent" fails and the next prompt shows 2 ✘; "sleep 3" shows 3s on the right; each finished prompt collapses to one short ❯ line](docs/images/status.gif)
+
 **git** uses [gitstatus](https://github.com/romkatv/gitstatus), Powerlevel10k's
 engine, which answers in about a millisecond even in large repositories; it
 starts the first time the shell is inside a repository. Under ble.sh a slow
 answer redraws the prompt when it arrives, as in zsh. Without gitstatus the
 prompt uses `git status`.
+
+![Classic prompt: echo into src/main.rs turns the git segment to !1 (modified), git add to +1 (staged), git commit to ⇡1 (one commit ahead of origin), and a new file adds ?1 (untracked)](docs/images/git.gif)
 
 Around the prompt bash4humans adds the terminal's current directory (OSC 7),
 the window title - the directory at the prompt, the command while it runs, with
@@ -214,6 +251,8 @@ lib/keys.bash         key bindings           lib/cmd.bash         the b4h comman
 lib/plugins.bash      plugin loader          plugins/             bundled plugins
 tools/b4h-tool/       Rust helper            tests/               tests (tests/README.md)
 tools/tui-capture/    screen capture for the tests (Rust)
+tools/term-render/    turns captured screens into the README's images (Rust)
+docs/demo/            makes the images: a throwaway HOME, the keys of each shot (shots.sh)
 .github/workflows/    CI and releases        docs/releasing.md    how a release is made
 THIRD-PARTY.md        what comes from elsewhere, and its licence
 ```

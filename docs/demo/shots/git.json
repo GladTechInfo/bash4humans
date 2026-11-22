@@ -1,0 +1,22 @@
+{
+  "about": "D: the git segment as a file is edited (!1), staged (+1) and committed (ahead of origin), then a new untracked file (?1).",
+  "style": "classic",
+  "cwd": "projects/webapp",
+  "prep": [],
+  "rows": 15,
+  "cols": 80,
+  "steps": [
+    {"wait": 7},
+    {"record": "frames", "interval": 0.1},
+    {"wait": 1.2},
+    {"type": "echo '// v2' >> src/main.rs", "delay": 0.07},
+    {"keys": "<enter>", "after": 1.6},
+    {"type": "git add .", "delay": 0.1},
+    {"keys": "<enter>", "after": 1.6},
+    {"type": "git commit -qm 'Version 2'", "delay": 0.07},
+    {"keys": "<enter>", "after": 1.8},
+    {"type": "touch notes.md", "delay": 0.1},
+    {"keys": "<enter>", "after": 2.0},
+    {"stop": true}
+  ]
+}

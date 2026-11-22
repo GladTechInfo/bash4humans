@@ -1,0 +1,28 @@
+{
+  "about": "C: syntax highlighting (an unknown command in red until it is complete, strings, variables), Tab completing a path, and the Tab menu with each option's description from the manual page.",
+  "style": "lean",
+  "cwd": "projects/webapp",
+  "prep": ["printf 'pub fn login() {}\\n// TODO: rate limiting\\n' > src/login.rs", "git add -A", "git -c user.name=Demo -c user.email=demo@example.com commit -qm 'Note a TODO'", "git update-ref refs/remotes/origin/main HEAD"],
+  "rows": 16,
+  "cols": 80,
+  "steps": [
+    {"wait": 7},
+    {"record": "frames", "interval": 0.1},
+    {"wait": 1.0},
+    {"type": "ech", "delay": 0.15},
+    {"wait": 0.9},
+    {"type": "o \"Hello, $USER\"", "delay": 0.12},
+    {"wait": 0.8},
+    {"keys": "<enter>", "after": 1.2},
+    {"type": "grep -rn TODO s", "delay": 0.12},
+    {"wait": 0.6},
+    {"keys": "<tab>", "after": 1.0},
+    {"keys": "<enter>", "after": 1.4},
+    {"type": "grep --co", "delay": 0.15},
+    {"wait": 0.6},
+    {"keys": "<tab>", "after": 2.0},
+    {"keys": "<tab>", "after": 1.2},
+    {"keys": "<tab>", "after": 1.8},
+    {"stop": true}
+  ]
+}

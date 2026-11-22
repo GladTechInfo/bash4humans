@@ -418,6 +418,11 @@ _p9k_build_ps1() {
   _p9k__pe_mark=$(( ! ${_p9k_ble:-0} ))
   # readline wants \001..\002 around codes, ble.sh none
   local mo=$'\001' me=$'\002'; (( ${_p9k_ble:-0} )) && mo='' me=''
+  # ble.sh redraws a changed prompt over the old one (Alt+arrows, transient
+  # prompt) without erasing what is left of a longer old line: each line
+  # but the last ends in "erase to end of line" (ble.sh passes it through
+  # as zero-width). readline: _b4h_prompt_refresh erases the lines itself.
+  local el=''; (( ${_p9k_ble:-0} )) && el=$'\e[K'
   # p10k (TERM_SHELL_INTEGRATION): OSC 133;A before the prompt (and before
   # a blank line or ruler kept in it), 133;B after its last line
   (( _p9k__si )) && ps=$mo$'\e]133;A\a'$me$ps
@@ -435,7 +440,7 @@ _p9k_build_ps1() {
     if (( c0 > 0 )); then
       if (( i < n )); then (( lw > 0 && (wraps += (lw - 1) / c0) )); else (( wraps += lw / c0 )); fi
     fi
-    (( i < n )) && ps+=$'\n'
+    (( i < n )) && ps+=$el$'\n'
   done
   _p9k_rps=''
   if [[ -n $_p9k_rprompt && -z ${_p9k_line_hidden[n]-} ]]; then
