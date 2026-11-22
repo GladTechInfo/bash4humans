@@ -13,7 +13,10 @@
 #  Undo: copy the files back from ~/bash-backup/<date>/ and remove ~/.cache/bash4humans.
 #
 #  Environment: B4H_SOURCE=DIR installs from a local copy instead of cloning;
-#               B4H_REPO=URL clones from elsewhere.
+#               B4H_REPO=URL clones from elsewhere;
+#               B4H_UNATTENDED=1 asks nothing (standard keys, ble.sh, no tmux,
+#               no direnv, ~/.bashrc replaced, login shell unchanged) and
+#               starts no shell at the end (for scripts and CI).
 # =============================================================================
 set -uo pipefail
 
@@ -25,8 +28,14 @@ die()   { say "$*"; exit 1; }
 bold()  { printf '\e[1m%s\e[0m' "$*"; }
 
 # One key, from the terminal even when this script arrived through a pipe.
+# Unattended: the first choice when it is 1, else n (the recommended ones).
 ask() {   # ask "1 2 q" -> $choice
   local valid=" $1 " key
+  if [[ -n ${B4H_UNATTENDED-} ]]; then
+    choice=n; [[ $valid == *' 1 '* ]] && choice=1
+    printf '\e[1mChoice [%s]:\e[0m %s (unattended)\n' "${1// /}" "$choice" >&2
+    return
+  fi
   while true; do
     printf '\e[1mChoice [%s]:\e[0m ' "${1// /}" >&2
     IFS= read -rsn1 key </dev/tty || exit 1
@@ -39,7 +48,7 @@ ask() {   # ask "1 2 q" -> $choice
 
 # ------------------------------------------------------------------ checks ---
 (( BASH_VERSINFO[0] >= 5 )) || die "needs bash 5 or later (this is $BASH_VERSION)"
-[[ -r /dev/tty ]] || die 'needs a terminal for its questions'
+[[ -n ${B4H_UNATTENDED-} || -r /dev/tty ]] || die 'needs a terminal for its questions (or B4H_UNATTENDED=1)'
 for tool in tar mktemp sha256sum; do command -v $tool >/dev/null || die "needs $tool"; done
 command -v curl >/dev/null || command -v wget >/dev/null || die 'needs curl or wget'
 [[ -n ${B4H_SOURCE-} ]] || command -v git >/dev/null || die 'needs git'
@@ -161,5 +170,9 @@ if [[ -n $chsh_to ]]; then
   chsh -s "$chsh_to" </dev/tty || say "chsh failed; run it yourself later: chsh -s $chsh_to"
 fi
 
+if [[ -n ${B4H_UNATTENDED-} ]]; then
+  say 'done - open a new terminal (or run: exec bash)'
+  exit 0
+fi
 say 'done - starting bash'
 exec bash -i </dev/tty

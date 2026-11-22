@@ -64,6 +64,7 @@ abbr() {
       if (( _b4h_ble )); then
         ble-sabbrev "$name=$*"     # position is enforced by _b4h_abbr_guard
       else
+        # shellcheck disable=SC2139  # (expanded now on purpose: the abbreviation's text)
         alias "$name=$*"
         [[ $pos == anywhere ]] && echo "abbr: '$name' works in command position only without ble.sh" >&2
       fi

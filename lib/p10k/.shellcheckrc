@@ -1,0 +1,9 @@
+# lib/p10k: the Powerlevel10k port, checked against p10k by tests/p10k.
+# CI holds it to errors only (style changes here would need the full
+# comparison again). These "errors" are shellcheck misreading:
+#   SC1087 escaped ${name[@]} inside eval strings
+#   SC1105 (( x $op y )) with the operator in a variable
+#   SC2261 >&"$fd" (a numbered descriptor, not a file) next to 2>/dev/null
+shell=bash
+disable=SC2154,SC2034,SC1090,SC1091,SC1007,SC2209
+disable=SC1087,SC1105,SC2261

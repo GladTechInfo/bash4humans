@@ -30,6 +30,43 @@ _b4h_osc7() {
   return 0
 }
 
+# ------------------------------------------------------------ window title ---
+# B4H_TITLE_IDLE at the prompt, B4H_TITLE_RUNNING while a command runs
+# (zsh4humans' term-title precmd / preexec). Both are bash prompt strings,
+# expanded with ${var@P}; the command line is in $B4H_COMMAND, which is
+# inserted as text (a value is never expanded again).
+_b4h_title_set() {    # $1: format, $2: the command line (or nothing)
+  [[ $B4H_TITLE == yes && -n $1 ]] || return 0
+  local B4H_COMMAND=$2 fmt=$1 t
+  # control characters (a newline in a command, escapes) become spaces:
+  # nothing from the command line can end the title sequence early
+  B4H_COMMAND=${B4H_COMMAND//[[:cntrl:]]/ }
+  B4H_COMMAND=${B4H_COMMAND#"${B4H_COMMAND%%[![:space:]]*}"}   # leading blanks
+  (( ${#B4H_COMMAND} <= 200 )) || B4H_COMMAND="${B4H_COMMAND:0:199}…"
+  t=${fmt@P}
+  printf '\e]0;%s\a' "${t//[[:cntrl:]]/ }"
+}
+_b4h_title_idle() { _b4h_title_set "$B4H_TITLE_IDLE"; }
+
+# The command that starts: ble.sh passes it to its PREEXEC hook. Plain
+# readline has no such hook; PS0 (printed as a command starts) calls
+# _b4h_title_ps0 in a subshell, which takes the command from the history,
+# if it was recorded there (a line starting with a space is not: then the
+# history's last entry is an older command, and the title stays as it is).
+_b4h_title_preexec() { _b4h_title_set "$B4H_TITLE_RUNNING" "$1"; }
+_b4h_hist_next=
+_b4h_title_ps0() {
+  [[ $B4H_TITLE == yes && -n $B4H_TITLE_RUNNING ]] || return 0
+  local h n
+  h=$(HISTTIMEFORMAT= builtin history 1)
+  h=${h#"${h%%[![:space:]]*}"}       # leading blanks
+  n=${h%%[!0-9]*}                    # the entry's number
+  [[ -n $n && $n == "$_b4h_hist_next" ]] || return 0
+  h=${h#"$n"}; h=${h#"${h%%[![:space:]]*}"}
+  _b4h_title_set "$B4H_TITLE_RUNNING" "$h"
+}
+_b4h_ps0_title='$(_b4h_title_ps0)'
+
 # ------------------------------------------------------------ prompt hooks ---
 # Runs after p10k's _p9k_precmd (which reads the status first) in
 # PROMPT_COMMAND: shared history (ble.sh shares it itself), the terminal's
@@ -39,7 +76,15 @@ _b4h_precmd() {
     history -a; history -n
   fi
   _b4h_osc7
-  [[ $B4H_TITLE == yes ]] && printf '\e]0;%s@%s: %s\a' "$USER" "${HOSTNAME%%.*}" "${PWD/#"$HOME"/\~}"
+  _b4h_dirhist_note
+  _b4h_title_idle
+  if (( ! _b4h_ble )); then
+    # readline: the number the next command gets in the history (HISTCMD
+    # here; \! lags behind once the history has entries), and the title
+    # code at the end of PS0 (p10k sets PS0 again whenever it initialises)
+    _b4h_hist_next=$HISTCMD
+    [[ $PS0 == *"$_b4h_ps0_title" ]] || PS0+=$_b4h_ps0_title
+  fi
   # P9K_COMMAND_DURATION_SECONDS: set by p10k when a command ran
   if (( B4H_NOTIFY_MIN > 0 )) && [[ -n ${P9K_COMMAND_DURATION_SECONDS-} ]]; then
     local secs=${P9K_COMMAND_DURATION_SECONDS%.*}
@@ -58,6 +103,8 @@ _b4h_precmd() {
 # keeping what has been typed (zsh4humans runs p10k's precmd again).
 _b4h_prompt_refresh() {
   _b4h_osc7
+  _b4h_dirhist_note
+  _b4h_title_idle
   _p9k_redraw_prompt
   # ble.sh: the new prompt's hash (_p9k_ble_q) makes it redraw by itself.
   # (ble/prompt/clear would leave the old first line on screen.)
@@ -93,6 +140,9 @@ _b4h_prompt_apply() {
   fi
   p10k_init
   [[ $PROMPT_COMMAND == *_b4h_precmd* ]] || PROMPT_COMMAND+="${PROMPT_COMMAND:+; }_b4h_precmd"
+  if (( _b4h_ble )); then
+    blehook PREEXEC!=_b4h_title_preexec    # (!= adds it once)
+  fi
   # plain readline: no ^C echoed on Ctrl-C (zsh's line editor shows none)
   (( _b4h_ble )) || bind 'set echo-control-characters off' 2>/dev/null
 }

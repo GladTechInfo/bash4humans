@@ -1,0 +1,82 @@
+# CI: lint, the Rust helper's tests, and an install into a fresh home that is
+# then used as an interactive shell and checked by tests/features.sh. The
+# comparisons with real Powerlevel10k (tests/p10k) need zsh and p10k and take
+# about two hours; they are run by hand (tests/README.md, docs/releasing.md).
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: bash -n (every shell file parses)
+        run: |
+          status=0
+          while IFS= read -r -d '' f; do
+            bash -n "$f" || { echo "syntax error: $f"; status=1; }
+          done < <(git ls-files -z '*.bash' '*.sh')
+          exit $status
+      - name: shellcheck
+        # lib/p10k is held to errors: it is checked against p10k itself, and
+        # its warnings are reviewed false positives (lib/p10k/.shellcheckrc)
+        run: |
+          shellcheck --version | sed -n 2p
+          shellcheck -S warning b4h.bash install.sh lib/*.bash plugins/*.bash tests/*.sh
+          shellcheck -S error lib/p10k/*.bash
+
+  rust:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools/b4h-tool
+    steps:
+      - uses: actions/checkout@v7
+      - run: cargo test --locked
+      - name: static builds (amd64, arm64) link
+        env:
+          CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: rust-lld
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: rust-lld
+        run: |
+          rustup target add x86_64-unknown-linux-musl aarch64-unknown-linux-musl
+          cargo build --locked --release --target x86_64-unknown-linux-musl
+          cargo build --locked --release --target aarch64-unknown-linux-musl
+      - name: third-party licences of the binary can be collected
+        run: ../third-party-licenses.sh | grep -c 'Permission is hereby granted'
+
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: the checksum checks of the downloads
+        run: bash tests/unit-deps.sh | tee unit-deps.txt && ! grep -q FAIL unit-deps.txt
+      - name: install, unattended, from this checkout
+        run: B4H_UNATTENDED=1 B4H_SOURCE="$PWD" bash install.sh
+      - name: an interactive shell starts and works
+        # tests/drive.sh types into `bash --rcfile ~/.bashrc -i` in a
+        # pseudo-terminal; the answer 42 must come back
+        # (no prompt wizard: it would take the typed keys)
+        env:
+          B4H_WIZARD: 'no'
+        run: |
+          export B4H_TEST_DIR=$RUNNER_TEMP/b4h
+          # shellcheck disable=SC2016  # the text typed into the shell
+          tests/drive.sh ~/.bashrc 'echo $((6 * 7))\r' 'b4h doctor\r' @20
+          tr -d '\r' <"$B4H_TEST_DIR/typescript" | sed 's/\x1b\[[0-9;?]*[a-zA-Z]//g' >screen.txt
+          cat screen.txt
+          grep -qx '42' screen.txt
+          grep -q 'ok line editor *ble.sh' screen.txt
+          grep -q 'ok fzf' screen.txt
+      - name: the zsh4humans keys and commands (tests/features.sh)
+        run: |
+          sudo apt-get install -y -qq jq >/dev/null
+          cargo install --locked --path tools/tui-capture --root "$RUNNER_TEMP/tc"
+          PATH=$RUNNER_TEMP/tc/bin:$PATH tests/features.sh

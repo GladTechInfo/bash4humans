@@ -1,0 +1,74 @@
+# Release: pushing a tag vX.Y.Z builds the static b4h-tool for amd64 and
+# arm64 and publishes the release lib/deps.bash downloads from:
+#   b4h-tool-linux-amd64, b4h-tool-linux-arm64, SHA256SUMS,
+#   THIRD-PARTY-LICENSES.txt (the Rust crates inside the binaries).
+# The tag must equal B4H_VERSION (b4h.bash), the version in
+# tools/b4h-tool/Cargo.toml and B4H_TOOL_VERSION (versions.conf).
+# Steps for a release: docs/releasing.md.
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write     # to create the release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: rust-lld
+      CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: rust-lld
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: the tag matches every version number
+        run: |
+          tag=${GITHUB_REF_NAME#v}
+          b4h=$(sed -n 's/^B4H_VERSION=//p' b4h.bash)
+          cargo=$(sed -n 's/^version = "\(.*\)"/\1/p' tools/b4h-tool/Cargo.toml | head -1)
+          conf=$(sed -n 's/^B4H_TOOL_VERSION=//p' versions.conf)
+          echo "tag $tag, b4h.bash $b4h, Cargo.toml $cargo, versions.conf $conf"
+          [[ $tag == "$b4h" && $tag == "$cargo" && $tag == "$conf" ]]
+
+      - name: test and build (static, musl)
+        working-directory: tools/b4h-tool
+        run: |
+          rustup target add x86_64-unknown-linux-musl aarch64-unknown-linux-musl
+          cargo test --locked
+          cargo build --locked --release --target x86_64-unknown-linux-musl
+          cargo build --locked --release --target aarch64-unknown-linux-musl
+
+      - name: collect, check that both run, checksums, licences
+        run: |
+          out=$RUNNER_TEMP/release; mkdir -p "$out"
+          cp tools/b4h-tool/target/x86_64-unknown-linux-musl/release/b4h-tool "$out/b4h-tool-linux-amd64"
+          cp tools/b4h-tool/target/aarch64-unknown-linux-musl/release/b4h-tool "$out/b4h-tool-linux-arm64"
+          sudo apt-get install -y -qq qemu-user >/dev/null
+          "$out/b4h-tool-linux-amd64" --version
+          qemu-aarch64 "$out/b4h-tool-linux-arm64" --version
+          file "$out"/b4h-tool-linux-*
+          tools/third-party-licenses.sh >"$out/THIRD-PARTY-LICENSES.txt"
+          (cd "$out" && sha256sum b4h-tool-linux-amd64 b4h-tool-linux-arm64 >SHA256SUMS && cat SHA256SUMS)
+
+      - name: publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          out=$RUNNER_TEMP/release
+          {
+            echo "bash4humans $GITHUB_REF_NAME"
+            echo
+            echo 'Install: see the README. These files are what the installer downloads:'
+            echo 'b4h-tool (zmv, "did you mean", converting ~/.p10k.zsh) as static binaries'
+            echo 'for x86_64 and aarch64 Linux. SHA-256:'
+            echo
+            echo '```'
+            cat "$out/SHA256SUMS"
+            echo '```'
+          } >"$out/notes.md"
+          gh release create "$GITHUB_REF_NAME" --title "bash4humans $GITHUB_REF_NAME" \
+            --notes-file "$out/notes.md" \
+            "$out/b4h-tool-linux-amd64" "$out/b4h-tool-linux-arm64" \
+            "$out/SHA256SUMS" "$out/THIRD-PARTY-LICENSES.txt"

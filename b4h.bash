@@ -16,7 +16,7 @@ _b4h_loaded=1
 
 B4H_ROOT=${BASH_SOURCE[0]%/*}
 [[ $B4H_ROOT == /* ]] || B4H_ROOT=$PWD/$B4H_ROOT
-B4H_VERSION=0.1.0
+B4H_VERSION=0.3.0
 
 # B4H_PROFILE=1 bash : print how long each start-up step takes.
 _b4h_t=${EPOCHREALTIME//[.,]/}
@@ -29,7 +29,7 @@ _b4h_mark() {
 
 . "$B4H_ROOT/lib/settings.bash"
 . "$B4H_ROOT/lib/deps.bash"
-_b4h_deps_ensure
+_b4h_deps_at_start=1 _b4h_deps_ensure    # (downloads, but no cargo build at start)
 _b4h_mark deps
 
 # ------------------------------------------------------------------- tmux ---
@@ -84,12 +84,14 @@ _b4h_mark completion
 . "$B4H_ROOT/lib/prompt.bash"       # the prompt (Powerlevel10k for bash, lib/p10k), terminal integration
 _b4h_prompt_apply
 _b4h_mark prompt
-. "$B4H_ROOT/lib/dirs.bash"         # directory history: back / forward / up / down, cdh
+. "$B4H_ROOT/lib/dirs.bash"         # directory history: back / forward / up / down, Alt+R, cdh
 _b4h_mark dirs
 . "$B4H_ROOT/lib/fish.bash"         # abbr, funced/funcsave, add_path, histdel, sudo toggle, help key
 _b4h_mark fish
 . "$B4H_ROOT/lib/cnf.bash"          # unknown commands: suffix aliases, did-you-mean, packages; zmv
 _b4h_mark cnf
+. "$B4H_ROOT/lib/clipboard.bash"    # x, c, v: cut, copy, paste
+_b4h_mark clipboard
 . "$B4H_ROOT/lib/keys.bash"         # key bindings
 _b4h_mark keys
 . "$B4H_ROOT/lib/cmd.bash"          # the `b4h` command

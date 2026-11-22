@@ -1,0 +1,22 @@
+[package]
+name = "tui-capture"
+version = "1.0.0"
+edition = "2024"
+description = "Runs a program in a fixed-size pseudo-terminal, sends keys on a schedule, saves screens as JSON"
+license = "GPL-3.0-or-later"
+
+# Crates:
+#   portable-pty — creates the pseudo-terminal and starts the TUI in it (from WezTerm)
+#   vt100        — the terminal emulator: turns the TUI's output into a grid of cells
+#   serde_json   — reads the spec, writes the snapshots
+# Test tool of bash4humans: `cargo install --path tools/tui-capture` puts it on PATH.
+[dependencies]
+portable-pty = "0.9"
+serde_json = { version = "1", features = ["preserve_order"] }
+vt100 = "0.18"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true

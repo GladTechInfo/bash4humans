@@ -1,9 +1,9 @@
 [package]
 name = "b4h-tool"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 description = "Helper for bash4humans: zmv-style bulk rename and 'did you mean' suggestions"
-license = "MIT"
+license = "GPL-3.0-or-later"
 
 [dependencies]
 # Pattern matching for `b4h-tool mv`: globs are translated into a regex.

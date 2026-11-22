@@ -1,0 +1,8 @@
+# shellcheck settings for bash4humans (CI: .github/workflows/ci.yml).
+# The modules are sourced into one shell: variables are set in one file and
+# read in another, and files are sourced by computed paths.
+shell=bash
+disable=SC2154,SC2034,SC1090,SC1091
+# deliberate: VAR= (empty) before another assignment; values that look like
+# command names (keymap=vi)
+disable=SC1007,SC2209

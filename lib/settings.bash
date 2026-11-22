@@ -19,13 +19,27 @@
 
 # ---------------------------------------------------------------- history ---
 : "${B4H_HISTORY_SHARE:=yes}"         # commands typed in one shell appear in the others
+: "${B4H_DIR_HISTORY_SIZE:=10000}"    # directories kept for Alt+R / cdh / cd -<Tab>, across shells (0: none)
+
+# -------------------------------------------------------------- clipboard ---
+: "${B4H_CLIPBOARD_COMMANDS:=yes}"    # yes: the commands x (cut), c (copy) and v (paste), unless taken
 
 # ----------------------------------------------------------------- prompt ---
 # The prompt is Powerlevel10k's, ported to bash. Its look lives in
 # ~/.config/bash4humans/p10k.bash (POWERLEVEL9K_* settings, as in ~/.p10k.zsh),
 # written by `b4h configure` (p10k's wizard, which the first start runs) or
 # converted from ~/.p10k.zsh (`b4h configure --from-p10k`); `b4h prompt edit`.
-: "${B4H_TITLE:=yes}"                 # yes: the window title shows user@host: directory
+: "${B4H_TITLE:=yes}"                 # yes: set the window title (formats below) | no
+# The title's formats, in bash prompt escapes (\u user, \h host, \w directory)
+# and $B4H_COMMAND (the command line that runs). Single quotes in ~/.bashrc.
+# Defaults as zsh4humans: user@host only over SSH. Empty: leave the title.
+if [[ -n ${SSH_CONNECTION-} ]]; then
+  [[ -v B4H_TITLE_IDLE ]]    || B4H_TITLE_IDLE='\u@\h: \w'               # at the prompt
+  [[ -v B4H_TITLE_RUNNING ]] || B4H_TITLE_RUNNING='\u@\h: $B4H_COMMAND'  # while a command runs
+else
+  [[ -v B4H_TITLE_IDLE ]]    || B4H_TITLE_IDLE='\w'
+  [[ -v B4H_TITLE_RUNNING ]] || B4H_TITLE_RUNNING='$B4H_COMMAND'
+fi
 : "${B4H_NOTIFY_MIN:=0}"              # >0: bell + desktop notification after commands this many seconds long
 
 # ---------------------------------------------------- terminal integration ---

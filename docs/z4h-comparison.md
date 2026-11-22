@@ -47,24 +47,24 @@ b4h; **n/a** = specific to zsh/macOS/iTerm2, nothing to port; **b4h+** = b4h has
 
 | Key | z4h | b4h | Status |
 |---|---|---|---|
-| Up/Down, Ctrl+P/N | history containing what is typed (this session first: "local") | substring search (shared history) | partial: no local/global split |
-| Ctrl+Up/Down | global prefix history (all sessions) | — | missing |
+| Up/Down, Ctrl+P/N | history containing what is typed (this session first: "local") | substring search (shared history); Enter runs the line found | partial: no local/global split |
+| Ctrl+Up/Down | global prefix history (all sessions) | prefix search (shared history) | same |
 | Home/End, Ctrl+Home/End, Alt+Home/End | line / buffer start-end | ble.sh defaults | same |
 | Ctrl+Left/Right, Alt+B/F | word left/right | same | same |
-| Ctrl+Shift+Left/Right, Ctrl+Shift+Del | shell-word (zword) move/delete | — (Ctrl+Alt+BS only) | partial |
+| Ctrl+Shift+Left/Right, Ctrl+Shift+Del | shell-word (zword) move/delete | same (ble.sh sword, readline shell-word) | same |
 | Alt+D, Ctrl+Del, Alt+Del | delete word right | Ctrl+Del; Alt+D readline/ble default | same |
 | Ctrl+W, Alt+BS, Ctrl+Alt+BS, Ctrl+BS, Ctrl+H | delete word left (Ctrl+Alt+BS: shell word) | same set | same |
 | Alt+K | delete to line start | — (Ctrl+U does it) | partial |
-| Alt+J | clear the whole buffer | — | missing |
-| Alt+O | stash the line, run it later (z4h-stash-buffer) | — | missing |
-| Alt+M | accept the whole suggestion | — (Right, Ctrl+F, End) | missing |
+| Alt+J | clear the whole buffer | same | same |
+| Alt+O | stash the line into history, clear it (z4h-stash-buffer) | same | same |
+| Alt+M | accept the whole suggestion | same (ble.sh) | same |
 | Ctrl+/ , Shift+Tab / Alt+/ | undo / redo | same | same |
-| Ctrl+Space | expand aliases, globs, parameters in place | — | missing |
+| Ctrl+Space | expand aliases, globs, parameters in place | alias, `~`, `$NAME`/`${NAME}`, glob; `$(...)` and other expansions are left alone (they would run code) | partial (on purpose) |
 | Tab | fzf completion (Ctrl+Space multi-select, Ctrl+A all, `recurse-dirs`, `fzf-bindings`) | ble.sh menu; `B4H_TAB=fzf` for fzf | partial |
 | Ctrl+R | fzf history (optional preview) | fzf history | same |
 | Alt+H | run-help | manual page | same |
 | Alt+Left/Right/Up/Down (Shift+ on macOS) | cd back / forward / up / pick subdirectory | same | same |
-| Alt+R | fzf over persistent directory history | `cdh` command (this session only), no key | partial |
+| Alt+R | fzf over persistent directory history | same (also `cdh`) | same |
 | Ctrl+L / Ctrl+Alt+L | soft clear (scrollback kept) / hard clear, prompt at top or bottom | clear-screen | partial |
 | macOS keyboard layout (`keyboard mac`) | — | n/a here |
 | — | Alt+S toggle sudo, Ctrl+T files, Alt+C cd (fzf) | b4h+ |
@@ -73,7 +73,7 @@ b4h; **n/a** = specific to zsh/macOS/iTerm2, nothing to port; **b4h+** = b4h has
 
 | z4h | b4h | Status |
 |---|---|---|
-| persistent directory history (survives the shell; `cd -<Tab>`; `dir-history` max-size) | back/forward stacks per session; `dirh`, `prevd`, `nextd`, `cdh` | partial: not persistent |
+| persistent directory history (survives the shell; `cd -<Tab>`; `dir-history` max-size) | same: `$B4H_HOME/dir-history`, `B4H_DIR_HISTORY_SIZE`, `cd -<Tab>` (ble.sh menu, readline fzf); plus per-session back/forward stacks | same |
 | auto_cd | `autocd` | same |
 | `propagate-cwd` (new tmux pane / tab opens in the same directory) | OSC 7 (terminals); nothing for tmux | partial |
 | OSC 9;9 for Windows Terminal (WSL) | — | missing |
@@ -104,10 +104,10 @@ b4h; **n/a** = specific to zsh/macOS/iTerm2, nothing to port; **b4h+** = b4h has
 |---|---|---|
 | `term-shell-integration` (OSC 133) | same (p10k's TERM_SHELL_INTEGRATION, on) | same |
 | OSC 7 current directory | same | same |
-| title: configurable, while idle and while a command runs (local / ssh) | `B4H_TITLE`: fixed user@host: dir, while idle only | partial |
+| title: configurable, while idle and while a command runs (local / ssh) | same: `B4H_TITLE_IDLE`, `B4H_TITLE_RUNNING` (bash prompt escapes, `$B4H_COMMAND`), z4h's defaults | same |
 | `prompt-at-bottom` | — | missing |
 | `term-vresize` (redraw on vertical resize) | — | missing |
-| clipboard: `x`, `c`, `v` (copy/paste, also over SSH) | — | missing |
+| clipboard: `x`, `c`, `v` | only planned (fn/notes.md), not in v5 | `x`, `c`, `v`: desktop tools, OSC 52 over SSH | b4h+ |
 | `-z4h-fix-locale` (pick a UTF-8 locale when none is set) | — | missing |
 | WSL: `$z4h_win_home`, `~w` | — | missing (no named dirs in bash; a variable is possible) |
 | macOS: Homebrew paths, iTerm2 integration | — | n/a here |
@@ -122,14 +122,15 @@ b4h; **n/a** = specific to zsh/macOS/iTerm2, nothing to port; **b4h+** = b4h has
 
 ## 9. Gaps, roughly by value
 
-1. Persistent directory history + Alt+R (fzf over it) - daily use.
-2. Keys: Alt+M (accept suggestion), Alt+O (stash line), Alt+J (clear buffer), Ctrl+Space
-   (expand), Ctrl+Shift+Left/Right/Del (shell words), Ctrl+Up/Down (global history).
-3. Clipboard `x` / `c` / `v` (OSC 52 over SSH).
-4. Title while a command runs; configurable title format.
-5. Local vs global history (needs a per-session list in bash).
-6. Locale fix-up (UTF-8 when none is set).
-7. SSH: automatic per-host teleportation, history retrieval, terminfo.
-8. Tab: fzf completion with multi-select / recurse-dirs as z4h's (B4H_TAB=fzf is simpler).
-9. Plugins from any GitHub repository (`b4h install user/repo`).
-10. prompt-at-bottom and soft/hard clear (z4h needs its integrated tmux for these).
+Closed on 2026-11-22: persistent directory history with Alt+R and `cd -<Tab>`;
+Alt+M, Alt+O, Alt+J, Ctrl+Space, Ctrl+Shift+Left/Right/Del, Ctrl+Up/Down; the
+title while a command runs; `x` / `c` / `v` (checked by `tests/features.sh`).
+What remains:
+
+1. Local vs global history (Up/Down this session's commands first; needs a
+   per-session list in bash).
+2. Locale fix-up (UTF-8 when none is set).
+3. SSH: automatic per-host teleportation, history retrieval, terminfo.
+4. Tab: fzf completion with multi-select / recurse-dirs as z4h's (B4H_TAB=fzf is simpler).
+5. Plugins from any GitHub repository (`b4h install user/repo`).
+6. prompt-at-bottom and soft/hard clear (z4h needs its integrated tmux for these).

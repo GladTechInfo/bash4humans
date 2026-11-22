@@ -26,10 +26,15 @@ you have a `~/.p10k.zsh`, that first start offers to **convert your
 Powerlevel10k prompt**; otherwise (or if you decline) the first prompt starts
 Powerlevel10k's configuration wizard, exactly as p10k does in zsh.
 
-Needs bash 5, curl or wget, tar, and git (to download it); make and gawk let
-it build the pinned ble.sh (else it takes ble.sh's nightly). **No zsh** (tested
-on a bare Debian 13 container with bash only). A Nerd Font in the terminal gives
-the full prompt; the wizard checks what your font can show.
+Needs Linux (x86_64 or arm64), bash 5, curl or wget, tar, and git (to
+download it); make and gawk let it build the pinned ble.sh (else it takes
+ble.sh's nightly). **No zsh.** Tested on Arch Linux (bash 5.3), Debian 13
+(bash 5.2, a bare container with bash only) and Debian testing. A Nerd Font in
+the terminal gives the full prompt; the wizard checks what your font can show.
+
+For scripts and provisioning, `B4H_UNATTENDED=1` answers every question with
+the recommended choice (standard keys, ble.sh, no tmux, `~/.bashrc` replaced)
+and starts no shell at the end.
 
 Your old startup files are copied to `~/bash-backup/<date>/`, and the old
 `~/.bashrc` is listed, commented out, at the end of the new one.
@@ -39,14 +44,15 @@ Your old startup files are copied to `~/bash-backup/<date>/`, and the old
 
 | | |
 |---|---|
-| **Suggestions** | grey text from history as you type; **Right** or **Ctrl+F** takes it |
+| **Suggestions** | grey text from history as you type; **Right**, **Ctrl+F** or **Alt+M** takes it |
 | **Highlighting** | commands, options, strings, paths; unknown commands in red |
 | **Completion** | TAB menu with a description per entry; option names read from man pages; `**`+TAB fuzzy |
 | **Fuzzy finder** | **Ctrl+R** history, **Ctrl+T** files, **Alt+C** cd (fzf) |
-| **History** | unlimited, timestamped, shared live between open shells; **Up/Down** search for what is typed |
+| **History** | unlimited, timestamped, shared live between open shells; **Up/Down** entries containing what is typed, **Ctrl+Up/Down** entries starting with it |
 | **Prompt** | Powerlevel10k: lean, classic, rainbow, pure; all its segments and settings, instant and transient prompt - see below |
-| **Directories** | **Alt+Left/Right** back/forward, **Alt+Up** parent, **Alt+Down** pick a subdirectory; `cdh`, `dirh`, `prevd`, `nextd`; type a directory name to enter it |
-| **Editing** | **Ctrl+Backspace** delete word, **Ctrl+Alt+Backspace** shell word, **Ctrl+/** or **Shift+Tab** undo, **Alt+/** redo, **Alt+S** toggle sudo, **Alt+H** manual page |
+| **Directories** | **Alt+Left/Right** back/forward, **Alt+Up** parent, **Alt+Down** pick a subdirectory; **Alt+R** (or `cdh`, `cd -`+TAB) any directory you have been to, in any shell; `dirh`, `prevd`, `nextd`; type a directory name to enter it |
+| **Editing** | **Ctrl+Backspace** delete word, **Ctrl+Alt+Backspace** shell word, **Ctrl+Shift+Left/Right/Delete** move or delete by shell word, **Ctrl+/** or **Shift+Tab** undo, **Alt+/** redo, **Alt+J** clear the line, **Alt+O** put it aside (Up brings it back), **Ctrl+Space** expand the word (alias, `~`, `$VAR`, glob), **Alt+S** toggle sudo, **Alt+H** manual page |
+| **Clipboard** | `... \| x` cut, `... \| c` copy (and pass on), `v` paste; over SSH copying reaches your own machine's clipboard (OSC 52) |
 | **Abbreviations** | `abbr -a gco git checkout` expands as you type, so history shows the real command |
 | **Unknown commands** | "did you mean", and the package that provides it (with `pkgfile` / `command-not-found`) |
 | **zsh extras** | `zmv` bulk rename, `alias_suffix txt=nano` (zsh's `alias -s`), `abbr --position anywhere` (zsh's `alias -g`) |
@@ -86,13 +92,14 @@ answer redraws the prompt when it arrives, as in zsh. Without gitstatus the
 prompt uses `git status`.
 
 Around the prompt bash4humans adds the terminal's current directory (OSC 7),
-the window title (`B4H_TITLE`) and a notification after long commands
-(`B4H_NOTIFY_MIN`).
+the window title - the directory at the prompt, the command while it runs, with
+user@host over SSH (`B4H_TITLE`, `B4H_TITLE_IDLE`, `B4H_TITLE_RUNNING`) - and a
+notification after long commands (`B4H_NOTIFY_MIN`).
 
 ## Commands
 
 ```
-b4h help | configure | prompt edit | prompt reload | plugins | doctor | update | ssh HOST | private | version
+b4h help | configure | prompt edit | prompt reload | plugins | doctor | update | ssh HOST | private | clipboard | version
 
 abbr -a NAME EXPANSION...              expand where a command goes
 abbr -a --position anywhere NAME ...   expand anywhere
@@ -106,8 +113,18 @@ alias_suffix txt=nano pdf=xdg-open     typing notes.txt runs nano notes.txt
 funced NAME / funcsave NAME            edit a function / keep it for every shell
 add_path [-a] [-P] DIR                 add to PATH once (-a append, -P for every shell)
 histdel TEXT                           delete history entries containing TEXT
-cdh / dirh / prevd / nextd             directory history
+cdh                                    pick a directory you have been to (fzf; also Alt+R)
+dirh / prevd / nextd                   this shell's back / forward history
+... | x    ... | c    v                cut / copy (and pass on) / paste
 ```
+
+The directory history is shared by all shells and kept between them
+(`~/.cache/bash4humans/dir-history`, newest first). `x`, `c` and `v` use
+wl-clipboard, xclip or xsel on a desktop; elsewhere - over SSH, on a console -
+copying sends the text to your terminal (OSC 52), which puts it into the
+clipboard of the machine in front of you, and `v` pastes the last copy made on
+that host. A name you already use for something else is left alone;
+`b4h clipboard` tells which tool is used.
 
 `zmv` refuses to run if any target already exists or two sources would get
 the same name; nothing is moved unless every move is safe.
@@ -142,7 +159,9 @@ default is in [`lib/settings.bash`](lib/settings.bash).
 | `B4H_TAB` | `menu` | `fzf` for an fzf picker on TAB |
 | `B4H_SUGGEST_ACCEPT` | `all` | `word`: Right takes one word |
 | `B4H_SHELL_INTEGRATION` | `yes` | OSC 7 / OSC 133 for the terminal (p10k's `TERM_SHELL_INTEGRATION`, switched on) |
-| `B4H_TITLE` | `yes` | the window title shows user@host: directory |
+| `B4H_TITLE` | `yes` | set the window title: `B4H_TITLE_IDLE` at the prompt (`'\w'`), `B4H_TITLE_RUNNING` while a command runs (`'$B4H_COMMAND'`); over SSH both start with `\u@\h: ` |
+| `B4H_DIR_HISTORY_SIZE` | `10000` | directories kept for Alt+R / `cdh` (0: none) |
+| `B4H_CLIPBOARD_COMMANDS` | `yes` | `no`: no `x`, `c`, `v` |
 | `B4H_NOTIFY_MIN` | `0` | >0: bell and desktop notification after commands that long (seconds) |
 | `B4H_SHELL_INTEGRATION_EXCEPT` | | SSH client addresses whose terminal prints those codes as text |
 | `B4H_SSH_SEND_FILES` | `()` | extra files `b4h ssh` copies (never overwrites the host's) |
@@ -173,7 +192,10 @@ against SHA-256 sums:
 | [fzf](https://github.com/junegunn/fzf) | MIT | fuzzy finder (a system fzf is used if installed) |
 | [bash-completion](https://github.com/scop/bash-completion) | GPL-2.0 | completions (a system copy is used if installed) |
 | [gitstatus](https://github.com/romkatv/gitstatus) | GPL-3.0 | git status for the prompt |
-| `b4h-tool` (this repo, Rust) | MIT | `zmv`, "did you mean", and `b4h configure --from-p10k` (converting a `~/.p10k.zsh`). Optional: the wizard and the prompt need only bash. A release binary is downloaded; without one it is built with cargo if present |
+| `b4h-tool` (this repo, Rust) | GPL-3.0-or-later | `zmv`, "did you mean", and `b4h configure --from-p10k` (converting a `~/.p10k.zsh`). Optional: the wizard and the prompt need only bash. The release's static binary is downloaded and checked against its SHA-256; without one it is built with cargo if present |
+
+A component that cannot be had (offline, no cargo) is not tried again at each
+start; `b4h update` tries again, and `b4h doctor` shows what is missing.
 
 ## Layout
 
@@ -187,19 +209,25 @@ lib/p10k/             Powerlevel10k for bash (engine, segments, wizard, instant 
 p10k/templates/       p10k's own configuration templates (the wizard edits them)
 p10k/config/          the templates converted to bash
 lib/dirs.bash         directory history  lib/fish.bash         fish features
-lib/cnf.bash          unknown commands, zmv
+lib/cnf.bash          unknown commands, zmv  lib/clipboard.bash   x, c, v
 lib/keys.bash         key bindings           lib/cmd.bash         the b4h command
 lib/plugins.bash      plugin loader          plugins/             bundled plugins
-tools/b4h-tool/       Rust helper            tests/               test helpers
+tools/b4h-tool/       Rust helper            tests/               tests (tests/README.md)
+tools/tui-capture/    screen capture for the tests (Rust)
+.github/workflows/    CI and releases        docs/releasing.md    how a release is made
+THIRD-PARTY.md        what comes from elsewhere, and its licence
 ```
 
 Build the helper: `cd tools/b4h-tool && cargo build --release --target x86_64-unknown-linux-musl`
 (a static binary). `cargo test` runs its tests. `tests/drive.sh RCFILE KEYS...` types
-into a real interactive shell.
+into a real interactive shell. `tests/features.sh` types the keys and commands
+borrowed from zsh4humans (Alt+R, Alt+O, Ctrl+Space, the title, `x`/`c`/`v`, ...)
+into bash4humans under ble.sh and under readline and checks the screen. What
+each test needs: [`tests/README.md`](tests/README.md).
 
 **Checked against real p10k:** `tests/p10k/all.sh` runs every comparison with
 Powerlevel10k in zsh (it needs zsh, a p10k checkout in `~/src/powerlevel10k`
-and `tui-capture`): the same configuration, keys and directory in both shells,
+and `tools/tui-capture`): the same configuration, keys and directory in both shells,
 screens compared cell by cell (character, colours, bold), plus p10k's own
 functions run against the port where no screen can be set up.
 `tests/p10k/wizard.sh` drives both wizards with the same keys and compares
@@ -217,4 +245,18 @@ Inspired by [zsh4humans](https://github.com/romkatv/zsh4humans) and
 holds p10k's configuration templates unchanged; its licence is in
 [`p10k/templates/LICENSE.powerlevel10k`](p10k/templates/LICENSE.powerlevel10k).
 gitstatus is used as a component. The heavy lifting in the line editor is
-[ble.sh](https://github.com/akinomyoga/ble.sh) by Koichi Murase.
+[ble.sh](https://github.com/akinomyoga/ble.sh) by Koichi Murase. Every
+third-party part and its licence: [`THIRD-PARTY.md`](THIRD-PARTY.md).
+
+## Licence
+
+Copyright (C) 2026 GladTechInfo.
+
+bash4humans is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version. It is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; see [`LICENSE`](LICENSE) for details.
+
+Parts come from other projects under their own licences (Powerlevel10k's MIT
+notice stays with the code derived from it); see [`THIRD-PARTY.md`](THIRD-PARTY.md).

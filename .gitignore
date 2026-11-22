@@ -5,3 +5,4 @@ tools/b4h-tool/target/
 # they stay on the developer's disk
 docs/handover-*.md
 docs/*.bak-*
+tools/tui-capture/target/

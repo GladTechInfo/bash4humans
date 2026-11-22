@@ -43,7 +43,7 @@ if [[ -n ${B4H_PRIVATE-} ]]; then
 fi
 
 if (( _b4h_ble )); then
-  bleopt history_share=$([[ $B4H_HISTORY_SHARE == yes ]] && echo 1)
+  bleopt history_share="$([[ $B4H_HISTORY_SHARE == yes ]] && echo 1)"
 fi
 
 # --------------------------------------------------------------- direnv ---

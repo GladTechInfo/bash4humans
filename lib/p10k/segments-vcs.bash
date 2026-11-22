@@ -62,6 +62,8 @@ _p9k_vcs_style() {
 }
 
 # ------------------------------------------------------ gitstatusd client ---
+# Ported from gitstatus.plugin.zsh, Copyright 2019 Roman Perepelitsa, GNU GPL
+# version 3 or later (https://github.com/romkatv/gitstatus); see THIRD-PARTY.md.
 # p10k talks to gitstatusd through gitstatus.plugin.zsh (gitstatus_query with
 # a callback, gitstatus_process_results). The bash plugin's gitstatus_query
 # can only wait, so this is a port of the zsh client that uses the pipes the

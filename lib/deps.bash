@@ -98,19 +98,38 @@ _b4h_dep_bashcomp() {
 }
 
 # ---------------------------------------------------------------- b4h-tool ---
+# The downloaded binary's checksum: the one pinned in versions.conf, else the
+# line for it in the release's SHA256SUMS. Status 1 when neither matches.
+_b4h_tool_sha_ok() {   # _b4h_tool_sha_ok TMPDIR ARCH
+  local pin=B4H_TOOL_SHA256_$2 want='' line
+  want=${!pin-}
+  if [[ -z $want ]]; then
+    _b4h_fetch "$B4H_TOOL_URL/SHA256SUMS" "$1/SHA256SUMS" 2>/dev/null || return 1
+    while read -r line; do
+      [[ $line == *" b4h-tool-linux-$2" || $line == *" *b4h-tool-linux-$2" ]] && want=${line%% *}
+    done <"$1/SHA256SUMS"
+    [[ -n $want ]] || return 1
+  fi
+  _b4h_sha_ok "$1/b4h-tool" "$want"
+}
+
 # Prefer the released static binary; build from tools/b4h-tool with cargo
-# when there is no release for this version or machine.
+# when there is no release for this version or machine - but only from the
+# installer and `b4h update`, never while a shell starts (_b4h_deps_at_start):
+# a compile there would hold up the prompt for a minute.
 _b4h_dep_tool() {
   local dir=$B4H_HOME/deps/bin want=$B4H_TOOL_VERSION arch src=$B4H_ROOT/tools/b4h-tool
   _b4h_stamp_is "$dir" "$want" && [[ -x $dir/b4h-tool ]] && return 0
   mkdir -p -- "$dir"
   arch=$(_b4h_arch)
   local tmp; tmp=$(mktemp -d) || return 1
-  if [[ -n $arch ]] && _b4h_fetch "$B4H_TOOL_URL/b4h-tool-linux-$arch" "$tmp/b4h-tool" 2>/dev/null; then
+  if [[ -n $arch ]] && _b4h_fetch "$B4H_TOOL_URL/b4h-tool-linux-$arch" "$tmp/b4h-tool" 2>/dev/null &&
+     _b4h_tool_sha_ok "$tmp" "$arch"; then
     chmod +x "$tmp/b4h-tool" && mv -- "$tmp/b4h-tool" "$dir/b4h-tool" && _b4h_stamp_set "$dir" "$want"
     rm -rf -- "$tmp"; return 0
   fi
   rm -rf -- "$tmp"
+  [[ -z ${_b4h_deps_at_start-} ]] || return 1   # (b4h update builds it)
   if command -v cargo >/dev/null && [[ -r $src/Cargo.toml ]]; then
     _b4h_say 'building b4h-tool with cargo'
     local target=() out=$src/target/release/b4h-tool
@@ -118,9 +137,10 @@ _b4h_dep_tool() {
       target=(--target "$(uname -m)-unknown-linux-musl")
       out=$src/target/$(uname -m)-unknown-linux-musl/release/b4h-tool
     fi
-    if ( cd "$src" && cargo build -q --release "${target[@]}" ) && [[ -x $out ]]; then
+    if ( cd "$src" && cargo build -q --release "${target[@]}" ) >/dev/null 2>&1 && [[ -x $out ]]; then
       cp -- "$out" "$dir/b4h-tool" && _b4h_stamp_set "$dir" "$want"; return 0
     fi
+    _b4h_say 'b4h-tool: the build failed (zmv, "did you mean" and converting ~/.p10k.zsh stay off)'
   fi
   return 1   # optional: zmv and "did you mean" are simply absent
 }
@@ -142,15 +162,33 @@ _b4h_dep_gitstatus() {
   rm -rf -- "$tmp"; return 1   # the git segment falls back to `git status`
 }
 
+# A component that could not be had (offline, no release for this machine,
+# no cargo) is not tried again at every start: deps/.failed-NAME keeps the
+# version that failed. A new pin in versions.conf, or `b4h update` (which sets
+# _b4h_deps_retry), tries again. Builtins only on the usual path.
+_b4h_dep_run() {   # _b4h_dep_run NAME VERSION FUNCTION
+  local mark=$B4H_HOME/deps/.failed-$1 v=''
+  if [[ -z ${_b4h_deps_retry-} ]]; then
+    { read -r v <"$mark"; } 2>/dev/null
+    [[ $v == "$2" ]] && return 1
+  fi
+  if "$3"; then
+    [[ -e $mark ]] && rm -f -- "$mark"
+    return 0
+  fi
+  printf '%s\n' "$2" >"$mark" 2>/dev/null
+  return 1
+}
+
 # Fetch whatever is missing or out of date. Failures are not fatal: each
 # feature checks for its component and falls back.
 _b4h_deps_ensure() {
   . "$B4H_ROOT/versions.conf"
   mkdir -p -- "$B4H_HOME/deps"
-  [[ $B4H_LINE_EDITOR == ble ]] && _b4h_dep_ble
-  _b4h_dep_fzf
-  _b4h_dep_bashcomp
-  _b4h_dep_gitstatus
-  _b4h_dep_tool
+  [[ $B4H_LINE_EDITOR == ble ]] && _b4h_dep_run ble.sh "$B4H_BLE_COMMIT" _b4h_dep_ble
+  _b4h_dep_run fzf "$B4H_FZF_VERSION" _b4h_dep_fzf
+  _b4h_dep_run bash-completion "$B4H_BASHCOMP_VERSION" _b4h_dep_bashcomp
+  _b4h_dep_run gitstatus "$B4H_GITSTATUS_VERSION" _b4h_dep_gitstatus
+  _b4h_dep_run b4h-tool "$B4H_TOOL_VERSION" _b4h_dep_tool
   return 0
 }

@@ -9,6 +9,7 @@
 #    b4h update           update bash4humans and its pinned components
 #    b4h ssh HOST [ARGS]  log in to HOST with bash4humans (nothing installed there for good)
 #    b4h private          a shell that keeps no history (exit to leave)
+#    b4h clipboard        how x, c and v reach the clipboard here
 #    b4h version
 # =============================================================================
 
@@ -24,18 +25,20 @@ b4h() {
     update)         _b4h_update ;;
     ssh)            _b4h_ssh "$@" ;;
     private)        B4H_PRIVATE=1 HISTFILE=/dev/null bash -i ;;
+    clipboard)      _b4h_clipboard_info ;;
     version|--version) echo "bash4humans $B4H_VERSION" ;;
     *) echo "b4h: unknown command '$sub' (b4h help)" >&2; return 2 ;;
   esac
 }
-complete -W 'help configure prompt doctor update ssh private plugins version' b4h
+complete -W 'help configure prompt doctor update ssh private clipboard plugins version' b4h
 
 _b4h_help() {
   sed -n '/^#    b4h help/,/^#    b4h version/p' "$B4H_ROOT/lib/cmd.bash" | sed 's/^#  //'
   cat <<'EOF'
 
   Also:   abbr, funced, funcsave, add_path, histdel, alias_suffix, zmv,
-          cdh, dirh, prevd, nextd.   Keys: see the top of lib/keys.bash.
+          cdh, dirh, prevd, nextd, x / c / v (clipboard).
+  Keys:   see the top of lib/keys.bash.
   Settings: the B4H_* lines in ~/.bashrc (all of them: lib/settings.bash).
 EOF
 }
@@ -58,7 +61,7 @@ _b4h_doctor() {
     printf '  %s completion   bash-completion %s\n' "$ok" "$(IFS=.; echo "${BASH_COMPLETION_VERSINFO[*]:-}")"
   else printf '  %s completion   bash-completion missing\n' "$no"; fi
   if [[ -n $_b4h_tool ]]; then printf '  %s b4h-tool     %s\n' "$ok" "$("$_b4h_tool" --version)"
-  else printf '  %s b4h-tool     missing: zmv, "did you mean" and b4h configure --from-p10k are off\n' "$no"; fi
+  else printf '  %s b4h-tool     missing: zmv, "did you mean" and b4h configure --from-p10k are off (b4h update tries again)\n' "$no"; fi
   if command -v pkgfile >/dev/null || [[ -x /usr/lib/command-not-found ]]; then
     printf '  %s packages     unknown commands show their package\n' "$ok"
   else
@@ -73,6 +76,9 @@ _b4h_doctor() {
   (( ${_p9k__tc_colors:-256} >= 256 )) ||
     printf '  %s colours      %s in this terminal (TERM=%s): colours above that show as the default\n' "$no" "$_p9k__tc_colors" "$TERM"
   (( _b4h_integrate )) && printf '  %s integration  OSC 7 / OSC 133 on\n' "$ok" || printf '  %s integration  off for this session\n' "$no"
+  local REPLY; _b4h_clip_tool
+  if [[ $REPLY == osc52 ]]; then printf '  %s clipboard    the terminal'"'"'s (OSC 52); v pastes the last copy made here\n' "$ok"
+  else printf '  %s clipboard    %s\n' "$ok" "$REPLY"; fi
 }
 
 _b4h_update() {
@@ -81,7 +87,7 @@ _b4h_update() {
   else
     echo "b4h update: $B4H_ROOT is a development copy; not pulling"
   fi
-  _b4h_deps_ensure
+  _b4h_deps_retry=1 _b4h_deps_ensure     # (components that failed are tried again)
   printf '%(%s)T\n' -1 >"$B4H_HOME/.last-update"
   echo 'b4h update: done - open a new shell (or: exec bash) to use it'
 }
