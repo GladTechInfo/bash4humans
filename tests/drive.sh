@@ -12,5 +12,5 @@ rc=$1; shift
     fi
   done
   sleep 1; printf 'exit\r'; sleep 1
-} | COLUMNS=110 LINES=40 TERM=xterm-256color LANG=en_GB.UTF-8 HISTFILE=$B4H_TEST_DIR/hist \
+} | COLUMNS=110 LINES=40 TERM=xterm-256color LANG=C.UTF-8 HISTFILE=$B4H_TEST_DIR/hist \
     script -qfec "stty cols 110 rows 40; bash --rcfile $rc -i" "$B4H_TEST_DIR/typescript" >/dev/null 2>&1
