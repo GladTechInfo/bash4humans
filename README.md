@@ -287,6 +287,11 @@ gitstatus is used as a component. The heavy lifting in the line editor is
 [ble.sh](https://github.com/akinomyoga/ble.sh) by Koichi Murase. Every
 third-party part and its licence: [`THIRD-PARTY.md`](THIRD-PARTY.md).
 
+**Contributors:** GladTechInfo, and [Claude](https://claude.com/claude-code)
+(Anthropic's AI model, through Claude Code), co-author of the code, the
+Powerlevel10k port, the tests and the README's pictures; its commits carry a
+`Co-Authored-By: Claude` line.
+
 ## Licence
 
 Copyright (C) 2026 GladTechInfo.
