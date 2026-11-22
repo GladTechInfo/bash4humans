@@ -17,8 +17,9 @@ keys() {
   printf 'b4h doctor >> /tmp/b4h-check 2>&1\r'; sleep 3
   printf 'gti --version >> /tmp/b4h-check 2>&1\r'; sleep 3
   printf 'sleep 4; false\r'; sleep 6
-  # the prompt as text (codes and readline markers removed)
-  printf 'printf "%%s\\n" "$_p9k_ps1" | tr -d "\\001\\002" | sed "s/\\x1b\\[[0-9;]*m//g; s/\\x1b\\][^\\x07]*\\x07//g" >> /tmp/b4h-check\r'; sleep 2
+  # the prompt as text (codes and readline markers removed; ESC[K ends each
+  # line of a multi-line prompt under ble.sh)
+  printf 'printf "%%s\\n" "$_p9k_ps1" | tr -d "\\001\\002" | sed "s/\\x1b\\[[0-9;]*[mK]//g; s/\\x1b\\][^\\x07]*\\x07//g" >> /tmp/b4h-check\r'; sleep 2
   printf 'exit\r'; sleep 2
 }
 keys | ssh -tt "$host" 'B4H_SOURCE=/tmp/bash4humans bash /tmp/bash4humans/install.sh' >"$B4H_TEST_DIR/$host.typescript" 2>&1

@@ -9,8 +9,9 @@ keys() {
   printf 'rm -rf /tmp/b4h-repo; mkdir /tmp/b4h-repo && cd /tmp/b4h-repo && git init -q 2>/dev/null; touch a b\r'; sleep 3
   printf 'echo "gs=$GITSTATUS_DAEMON_PID" >> /tmp/b4h-check\r'; sleep 2
   printf 'sleep 4; (exit 130)\r'; sleep 6
-  # the prompt as text (codes and readline markers removed)
-  printf 'printf "%%s\\n" "$_p9k_ps1" | tr -d "\\001\\002" | sed "s/\\x1b\\[[0-9;]*m//g; s/\\x1b\\][^\\x07]*\\x07//g" >> /tmp/b4h-check\r'; sleep 2
+  # the prompt as text (codes and readline markers removed; ESC[K ends each
+  # line of a multi-line prompt under ble.sh)
+  printf 'printf "%%s\\n" "$_p9k_ps1" | tr -d "\\001\\002" | sed "s/\\x1b\\[[0-9;]*[mK]//g; s/\\x1b\\][^\\x07]*\\x07//g" >> /tmp/b4h-check\r'; sleep 2
   printf 'abbr -a gco git checkout\r'; sleep 1
   printf 'gco -h >/dev/null 2>&1; history 1 >> /tmp/b4h-check\r'; sleep 2
   printf 'zmv -n "(*)" "x-\\$1" >> /tmp/b4h-check 2>&1\r'; sleep 2
