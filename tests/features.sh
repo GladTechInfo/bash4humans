@@ -282,15 +282,29 @@ FAKE
     sed -e "s|^B4H_HOME=.*|B4H_HOME=\${B4H_HOME:-$d/home}|" -e "s|^HISTFILE=.*|HISTFILE=\${HISTFILE:-$d/hist}|" \
         -e "s|^\. $ROOT/b4h.bash\$|. \"\\\$B4H_HOME/b4h/b4h.bash\"|" "$d/rc" >"$d/rc-ssh"
     sed -i "1i B4H_SSH_HOSTS=('*.lab'); B4H_SSH_RETRIEVE_HISTORY=$d/remote-hist; B4H_RCFILE=$d/rc-ssh; PATH=$T/fakebin:\$PATH; export FAKE_REMOTE=$T/remote" "$d/rc-ssh"
-    rm -f "$d/remote-hist"
+    # Per host: TERM, a file brought back, a configure hook with a prelude.
+    # The shell's own HOME is a directory of its own here, so ~/notes.txt is
+    # $d/localhome/notes.txt here and $T/remote/notes.txt on the "host".
+    mkdir -p "$d/localhome"
+    {
+      echo "HOME=$d/localhome"
+      echo "B4H_SSH_TERM=('*.lab=screen-256color')"
+      echo "B4H_SSH_RETRIEVE_FILES=('~/notes.txt')"
+      echo 'b4h_ssh_configure() { B4H_SSH_PRELUDE+=("export HOOK_HOST=$1"); }'
+    } >>"$d/rc-ssh"
+    rm -f "$d/remote-hist" "$d/localhome/notes.txt" "$T/remote/notes.txt"
     RC=$d/rc-ssh run_screen ssh "$e" 'ssh other\r' '@10' 'ssh -p 2222 box.lab\r' '@80' \
-      'echo "remote=$B4H_HOME hist=$HISTFILE"\r' '@10' 'echo marker-77\r' '@10' 'exit\r' '@30'
+      'echo "remote=$B4H_HOME hist=$HISTFILE"\r' '@10' 'echo marker-77\r' '@10' \
+      'echo "term=$TERM hook=$HOOK_HOST"; echo note-55 >~/notes.txt\r' '@10' 'exit\r' '@30'
     has 'PLAIN-SSH other'; check "ssh: other hosts unchanged $e" $? 'no plain ssh'
     # (the line is longer than the screen: compare with the wrapped rows joined)
     ok=1; [[ ${SCREEN//$'\n'/} == *"remote=$T/remote/.cache/bash4humans-ssh hist=$T/remote/.cache/bash4humans-ssh.history"* ]] && ok=0
     check "ssh: a B4H_SSH_HOSTS host teleports $e" "$ok" 'no bash4humans on the host'
     ok=1; grep -qx 'echo marker-77' "$d/remote-hist" 2>/dev/null && ! grep -q marker-77 "$d/hist" && ok=0
     check "ssh: the session's history comes back $e" "$ok" "$(cat "$d/remote-hist" 2>&1)"
+    has 'term=screen-256color hook=box.lab'; check "ssh: B4H_SSH_TERM and the configure hook $e" $? 'TERM or prelude not set there'
+    ok=1; [[ $(cat "$d/localhome/notes.txt" 2>/dev/null) == note-55 ]] && ok=0
+    check "ssh: B4H_SSH_RETRIEVE_FILES brings ~/notes.txt back $e" "$ok" "$(ls "$d/localhome" 2>&1)"
   fi
 
   if want fzf-tab && [[ $e == ble ]]; then

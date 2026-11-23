@@ -130,9 +130,36 @@ _b4h_auto_update_check() {
 #    (TERMINFO for the session; nothing system-wide), or, without `tic`
 #    there, TERM=xterm-256color.
 # With B4H_SSH_HOSTS set, a plain `ssh HOST` to a matching host does this.
+# Per host (as zsh4humans' :z4h:ssh:HOST styles):
+#  - B4H_SSH_TERM=('*.lab=xterm-256color' ...): the TERM used there;
+#  - B4H_SSH_RETRIEVE_FILES=(~/.notes ...): after the session, each file is
+#    copied back from HOST to the same path here (retrieve-extra-files);
+#  - a function b4h_ssh_configure, if you define one, runs before each
+#    connection with the host's name in $1. It may change, for that session
+#    only, B4H_SSH_SEND_FILES, B4H_SSH_RETRIEVE_FILES, B4H_SSH_SESSION_TERM
+#    and B4H_SSH_PRELUDE (commands run on HOST before bash4humans starts,
+#    e.g. 'export EDITOR=vim').
 _b4h_ssh() {
   (( $# )) || { echo 'usage: b4h ssh HOST [ssh options]' >&2; return 2; }
-  local bundle=$B4H_HOME/ssh-bundle.tar.gz stage sha f out rc
+  local stage sha f out rc REPLY
+  _b4h_ssh_parse "$@"; local host=$REPLY
+
+  # This session's settings: copies the hook may change (local, so the
+  # changes end with the session). TERM: the first B4H_SSH_TERM pattern
+  # that matches the host, else this terminal's.
+  local -a B4H_SSH_SEND_FILES=("${B4H_SSH_SEND_FILES[@]}")
+  local -a B4H_SSH_RETRIEVE_FILES=("${B4H_SSH_RETRIEVE_FILES[@]}")
+  local -a B4H_SSH_PRELUDE=("${B4H_SSH_PRELUDE[@]}")
+  local B4H_SSH_SESSION_TERM=$TERM p
+  for p in "${B4H_SSH_TERM[@]}"; do
+    # shellcheck disable=SC2053  # the pattern is a glob on purpose
+    [[ $host == ${p%%=*} ]] && { B4H_SSH_SESSION_TERM=${p#*=}; break; }
+  done
+  declare -F b4h_ssh_configure >/dev/null && b4h_ssh_configure "$host"
+
+  # One bundle per set of files sent (the hook may choose them per host).
+  local key; key=$(printf '%s\0' "${B4H_SSH_SEND_FILES[@]}" | sha256sum); key=${key:0:12}
+  local bundle=$B4H_HOME/ssh-bundle-$key.tar.gz
   local -a ctl=(-o ControlMaster=auto -o "ControlPath=$B4H_HOME/ssh-%C" -o ControlPersist=60)
 
   # Rebuild the bundle when anything in it is newer.
@@ -158,7 +185,7 @@ _b4h_ssh() {
   # session's lines), whether it knows this terminal, and whether its copy is
   # current (exit 0) or needs uploading (exit 3). Remote commands go through
   # sh -c so they work whatever the login shell is (csh on BSD).
-  local term=${TERM//[^A-Za-z0-9._+-]/}
+  local term=${B4H_SSH_SESSION_TERM//[^A-Za-z0-9._+-]/}
   local up="d=\$HOME/.cache/bash4humans-ssh; h=\$d.history; n=0; [ -r \$h ] && n=\$(wc -l <\$h);
     t=0; if [ -n '$term' ] && ! infocmp '$term' >/dev/null 2>&1; then
       if command -v infocmp >/dev/null 2>&1 || ! ls /usr/share/terminfo/*/'$term' /lib/terminfo/*/'$term' >/dev/null 2>&1; then
@@ -188,10 +215,17 @@ _b4h_ssh() {
       "sh -c 'd=\$HOME/.cache/bash4humans-ssh.terminfo; mkdir -p \$d && cat >\$d/src && tic -x -o \$d \$d/src >/dev/null 2>&1'" &&
       tstate=3
   fi
-  [[ $tstate == 3 ]] && envs='TERMINFO=$HOME/.cache/bash4humans-ssh.terminfo '
+  [[ $term != "$TERM" ]] && envs="TERM=$term "
+  [[ $tstate == 3 ]] && envs+='TERMINFO=$HOME/.cache/bash4humans-ssh.terminfo '
   [[ $tstate == 1 || $tstate == 2 ]] && envs='TERM=xterm-256color '
 
-  local launch="if command -v bash >/dev/null; then ${envs}B4H_HOME=\$HOME/.cache/bash4humans-ssh HISTFILE=\$HOME/.cache/bash4humans-ssh.history exec bash --rcfile \$HOME/.cache/bash4humans-ssh/bashrc -i; else exec \$SHELL -l; fi"
+  # B4H_SSH_PRELUDE: commands for the host, run before bash4humans starts
+  # (inside the single-quoted sh -c below: their quotes are escaped)
+  local prelude=
+  for p in "${B4H_SSH_PRELUDE[@]}"; do prelude+="$p; "; done
+  prelude=${prelude//\'/\'\\\'\'}
+
+  local launch="${prelude}if command -v bash >/dev/null; then ${envs}B4H_HOME=\$HOME/.cache/bash4humans-ssh HISTFILE=\$HOME/.cache/bash4humans-ssh.history exec bash --rcfile \$HOME/.cache/bash4humans-ssh/bashrc -i; else exec \$SHELL -l; fi"
   command ssh -t "${ctl[@]}" "$@" "sh -c '$launch'"; rc=$?
 
   # This session's history lines, appended to B4H_SSH_RETRIEVE_HISTORY.
@@ -200,6 +234,24 @@ _b4h_ssh() {
     command ssh "${ctl[@]}" "$@" "sh -c 'tail -n +$((nhist + 1)) \$HOME/.cache/bash4humans-ssh.history 2>/dev/null'" >>"$into" ||
       echo 'b4h ssh: could not bring the history back' >&2
   fi
+  # B4H_SSH_RETRIEVE_FILES: ~/path or /path, the same on both ends; a file
+  # the host does not have is left alone here.
+  local local_f remote_f
+  for f in "${B4H_SSH_RETRIEVE_FILES[@]}"; do
+    local_f=${f/#\~/$HOME}
+    remote_f=$f
+    # shellcheck disable=SC2088  # a literal ~/ in the setting's text, on purpose
+    [[ $f == '~/'* ]] && remote_f="\$HOME/${f#\~/}"
+    # ~/x written unquoted in ~/.bashrc arrives as this home's full path: the same file
+    # under the host's home
+    [[ $f == "$HOME"/* ]] && remote_f="\$HOME/${f#"$HOME"/}"
+    remote_f=${remote_f//\'/\'\\\'\'}
+    if command ssh "${ctl[@]}" "$@" "sh -c 'test -f \"$remote_f\" && cat \"$remote_f\"'" >"$local_f.b4h-tmp" 2>/dev/null; then
+      mv -- "$local_f.b4h-tmp" "$local_f"
+    else
+      rm -f -- "$local_f.b4h-tmp"
+    fi
+  done
   return "$rc"
 }
 
@@ -207,34 +259,43 @@ _b4h_ssh() {
 # `ssh HOST` is `b4h ssh HOST` for hosts matching B4H_SSH_HOSTS, when it is an
 # interactive login: a terminal on both ends, no remote command, none of
 # -N -T -f -G -O -Q -V -W -s. Anything else runs ssh unchanged.
-_b4h_ssh_wants() {      # ARGS... -> 0: teleport
-  local a dest= opt
-  (( ${#B4H_SSH_HOSTS[@]} )) && [[ -t 0 && -t 1 ]] || return 1
+# ssh's arguments -> REPLY: the host (user@ and ssh://...:port removed);
+# return 0 when they make an interactive login (no remote command, none of
+# the flags that mean otherwise), else 1.
+_b4h_ssh_parse() {
+  local a dest= opt login=0
+  REPLY=
   while (( $# )); do
     a=$1; shift
-    if [[ -n $dest ]]; then return 1; fi              # a remote command follows the host
+    if [[ -n $dest ]]; then login=1; break; fi        # a remote command follows the host
     case $a in
-      --) dest=${1-}; [[ -n $dest ]] || return 1; shift ;;
+      --) dest=${1-}; shift ;;
       -*)
         opt=${a:1}
         # flags that mean "no interactive login"
-        [[ $opt == *[NTfGVs]* && $opt != [BbcDEeFIiJLlmOopQRSWw]* ]] && return 1
+        [[ $opt == *[NTfGVs]* && $opt != [BbcDEeFIiJLlmOopQRSWw]* ]] && login=1
         # options with an argument: -p 22, or -p22
         case ${opt:0:1} in
-          O|Q|W) return 1 ;;
-          B|b|c|D|E|e|F|I|i|J|L|l|m|o|p|R|S|w)
+          O|Q|W) login=1 ;;
+        esac
+        case ${opt:0:1} in
+          B|b|c|D|E|e|F|I|i|J|L|l|m|O|o|p|Q|R|S|W|w)
             [[ ${#opt} == 1 ]] && shift ;;
         esac ;;
       *) dest=$a ;;
     esac
   done
   [[ -n $dest ]] || return 1
-  # user@host, ssh://user@host:port -> host
-  local host=${dest#ssh://}; host=${host##*@}; [[ $dest == ssh://* ]] && host=${host%%:*}
-  local p
+  REPLY=${dest#ssh://}; REPLY=${REPLY##*@}; [[ $dest == ssh://* ]] && REPLY=${REPLY%%:*}
+  return "$login"
+}
+_b4h_ssh_wants() {      # ARGS... -> 0: teleport
+  local REPLY p
+  (( ${#B4H_SSH_HOSTS[@]} )) && [[ -t 0 && -t 1 ]] || return 1
+  _b4h_ssh_parse "$@" || return 1
   for p in "${B4H_SSH_HOSTS[@]}"; do
     # shellcheck disable=SC2053  # the pattern is a glob on purpose
-    [[ $host == $p ]] && return 0
+    [[ $REPLY == $p ]] && return 0
   done
   return 1
 }

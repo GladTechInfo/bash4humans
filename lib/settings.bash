@@ -58,6 +58,12 @@ fi
 # Hosts where a plain `ssh HOST` does the same (patterns: build-server '*.lab');
 # empty: ssh is never changed. Only interactive logins (no remote command).
 [[ -v B4H_SSH_HOSTS ]] || B4H_SSH_HOSTS=()
+# Per host: TERM there ('*.lab=xterm-256color'), files brought back after a
+# session (~/.notes), commands run there before bash4humans starts; a function
+# b4h_ssh_configure HOST may change them per session (see lib/cmd.bash).
+[[ -v B4H_SSH_TERM ]] || B4H_SSH_TERM=()
+[[ -v B4H_SSH_RETRIEVE_FILES ]] || B4H_SSH_RETRIEVE_FILES=()
+[[ -v B4H_SSH_PRELUDE ]] || B4H_SSH_PRELUDE=()
 : "${B4H_SSH_RETRIEVE_HISTORY:=}"     # a file: after each b4h ssh session, its new history lines are appended to it
 : "${B4H_RCFILE:=$HOME/.bashrc}"      # the rc file `b4h ssh` sends (the one that loads bash4humans)
 : "${B4H_WIZARD:=yes}"                # no: never offer `b4h configure` on the first start
