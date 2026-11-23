@@ -61,7 +61,7 @@ mk_env() {    # $1: ble | readline
 }
 
 # run_screen NAME EDITOR STEP... : run the keys (each STEP one string;
-# RC=FILE: another rc file;
+# RC=FILE: another rc file; CPR=1: the terminal answers ESC[6n;
 # "@N" waits N tenths of a second; "!CMD" runs CMD beside the shell, as
 # another terminal would), keep the screen as text.
 run_screen() {
@@ -82,8 +82,8 @@ run_screen() {
     fi
   done
   steps+=', {"wait": 1}, {"snap": "screen"}, {"keys": "\u0003exit\r"}, {"wait": 1}]'
-  printf '{"cmd": ["bash", "--rcfile", "%s", "-i"], "rows": 30, "cols": 100, "env": {"TERM": "xterm-256color", "LANG": "C.UTF-8", "COLORTERM": "", "HOME": "%s"}, "steps": %s}\n' \
-    "${RC:-$d/rc}" "$HOME" "$steps" >"$out.json"
+  printf '{"cmd": ["bash", "--rcfile", "%s", "-i"], "rows": 30, "cols": 100, "answer_cpr": %s, "env": {"TERM": "xterm-256color", "LANG": "C.UTF-8", "COLORTERM": "", "HOME": "%s"}, "steps": %s}\n' \
+    "${RC:-$d/rc}" "$([[ -n ${CPR-} ]] && echo true || echo false)" "$HOME" "$steps" >"$out.json"
   rm -rf "$out"
   tui-capture "$out.json" "$out" >/dev/null 2>&1
   jq -r '.grid[] | map(.[0]) | join("") | sub(" +$"; "")' "$out/screen.json" >"$out.txt" 2>/dev/null
@@ -305,6 +305,22 @@ FAKE
     last=$(grep '❯' <<<"$SCREEN" | tail -1)
     ok=1; [[ $last =~ ls\ (a1|a2)\.txt\ *$|ls\ b\\\ 3\.txt\ *$ ]] && ok=0
     check "fzf Tab: Enter inserts one $e" "$ok" "$last"
+  fi
+
+  if want clear; then
+    # Ctrl+L: the screen is cleared, the line kept; the prompt on the first
+    # row, or with B4H_PROMPT_AT_BOTTOM=yes on the last (also at start, when
+    # the terminal says where the cursor is).
+    run_screen clear-top "$e" 'seq 1 60\r' '@5' 'typed-8' '\x0c' '@5'
+    ok=1; [[ $(head -1 <<<"$SCREEN") == *'typed-8'* && $SCREEN != *$'\n'58$'\n'* ]] && ok=0
+    check "Ctrl+L: prompt on top $e" "$ok" "$(head -1 <<<"$SCREEN")"
+    { echo 'B4H_PROMPT_AT_BOTTOM=yes'; cat "$d/rc"; } >"$d/rc-bottom"
+    RC=$d/rc-bottom CPR=1 run_screen bottom-start "$e" '@5'
+    ok=1; [[ $(sed -n 30p "$T/out/bottom-start-$e.txt") == *'❯'* ]] && ok=0
+    check "prompt at bottom: at start $e" "$ok" "$(grep -n '❯' "$T/out/bottom-start-$e.txt" | tail -1)"
+    RC=$d/rc-bottom CPR=1 run_screen bottom-clear "$e" 'echo top-9\r' '@5' 'typed-9' '\x0c' '@5'
+    ok=1; [[ $(sed -n 30p "$T/out/bottom-clear-$e.txt") == *'typed-9'* && $SCREEN != *top-9$'\n'* ]] && ok=0
+    check "prompt at bottom: Ctrl+L $e" "$ok" "$(grep -n 'typed-9' "$T/out/bottom-clear-$e.txt")"
   fi
 
   if want locale; then

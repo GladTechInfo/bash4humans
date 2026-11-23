@@ -266,7 +266,14 @@ fn run() -> Result<(), String> {
     // LEARNER NOTE — a closure that borrows
     //   `pump` reads `rx` from its surroundings (a closure "captures" it); the terminal and the
     //   recorder are passed in, because the loop below also uses them between calls.
-    let pump = |term: &mut vt100::Parser, rec: &mut Option<Recorder>, seconds: f64| -> Result<(), String> {
+    // "answer_cpr": true - answer the cursor-position query ESC[6n with ESC[ROW;COLR, as a
+    // terminal does (off by default: the parity tests run without it).
+    let answer_cpr = spec["answer_cpr"].as_bool().unwrap_or(false);
+    let pump = |term: &mut vt100::Parser,
+                rec: &mut Option<Recorder>,
+                writer: &mut Box<dyn Write + Send>,
+                seconds: f64|
+     -> Result<(), String> {
         let end = Instant::now() + Duration::from_secs_f64(seconds);
         while let Some(left) = end.checked_duration_since(Instant::now()) {
             let wait = match rec {
@@ -274,7 +281,16 @@ fn run() -> Result<(), String> {
                 None => left,
             };
             match rx.recv_timeout(wait) {
-                Ok(data) => term.process(&data),
+                Ok(data) => {
+                    term.process(&data);
+                    // LEARNER NOTE — `windows(n)`: every run of n neighbouring bytes, to find a
+                    //   byte sequence inside a slice.
+                    if answer_cpr && data.windows(4).any(|w| w == b"\x1b[6n") {
+                        let (y, x) = term.screen().cursor_position();
+                        let _ = write!(writer, "\x1b[{};{}R", y + 1, x + 1);
+                        let _ = writer.flush();
+                    }
+                }
                 Err(mpsc::RecvTimeoutError::Timeout) => {
                     if rec.is_none() {
                         break; // nothing more within `left`
@@ -292,18 +308,18 @@ fn run() -> Result<(), String> {
 
     for step in spec["steps"].as_array().ok_or("spec: steps missing")? {
         if let Some(s) = step["wait"].as_f64() {
-            pump(&mut term, &mut rec, s)?;
+            pump(&mut term, &mut rec, &mut writer, s)?;
         } else if let Some(k) = step["keys"].as_str() {
             writer.write_all(key_bytes(k).as_bytes()).map_err(|e| e.to_string())?;
             writer.flush().map_err(|e| e.to_string())?;
-            pump(&mut term, &mut rec, step["after"].as_f64().unwrap_or(0.4))?;
+            pump(&mut term, &mut rec, &mut writer, step["after"].as_f64().unwrap_or(0.4))?;
         } else if let Some(text) = step["type"].as_str() {
             // Typed one character at a time, as a person would ("delay" seconds apart).
             let delay = step["delay"].as_f64().unwrap_or(0.12);
             for c in text.chars() {
                 writer.write_all(c.to_string().as_bytes()).map_err(|e| e.to_string())?;
                 writer.flush().map_err(|e| e.to_string())?;
-                pump(&mut term, &mut rec, delay)?;
+                pump(&mut term, &mut rec, &mut writer, delay)?;
             }
         } else if let Some(dir) = step["record"].as_str() {
             let dir = std::path::Path::new(outdir).join(dir);
@@ -316,7 +332,7 @@ fn run() -> Result<(), String> {
         } else if let Some(sh) = step["sh"].as_str() {
             std::process::Command::new("sh").arg("-c").arg(sh).spawn().map_err(|e| format!("sh: {e}"))?;
         } else if let Some(name) = step["snap"].as_str() {
-            pump(&mut term, &mut rec, 0.05)?;
+            pump(&mut term, &mut rec, &mut writer, 0.05)?;
             let path = std::path::Path::new(outdir).join(format!("{name}.json"));
             std::fs::write(&path, snapshot(term.screen(), rows, cols).to_string())
                 .map_err(|e| format!("{}: {e}", path.display()))?;
@@ -330,7 +346,7 @@ fn run() -> Result<(), String> {
     let _ = writer.write_all(b"q");
     let _ = writer.flush();
     rec = None;
-    let _ = pump(&mut term, &mut rec, 1.0);
+    let _ = pump(&mut term, &mut rec, &mut writer, 1.0);
     let _ = child.kill();
     Ok(())
 }

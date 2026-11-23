@@ -42,6 +42,23 @@ fi
 [[ -n $B4H_GREETING ]] && eval "$B4H_GREETING"
 _b4h_mark greeting
 
+# -------------------------------------------------------- prompt at bottom ---
+# B4H_PROMPT_AT_BOTTOM=yes: the first prompt starts on the last row, as in
+# zsh4humans. The terminal says where the cursor is (ESC[6n answers
+# ESC[ROW;COLR); newlines move it down to the bottom. Skipped when keys are
+# already waiting (they would be read as the answer).
+if [[ $B4H_PROMPT_AT_BOTTOM == yes && -t 0 && -t 1 ]] && ! read -t 0 -N 0 2>/dev/null; then
+  _b4h_rows= _b4h_row=
+  { read -r _b4h_rows _ < <(stty size); } 2>/dev/null
+  printf '\e[6n'                       # the question (read -p would print it on stderr)
+  IFS='[;' read -rs -d R -t 0.5 _ _b4h_row _
+  if [[ $_b4h_rows =~ ^[0-9]+$ && $_b4h_row =~ ^[0-9]+$ ]] && (( _b4h_rows > _b4h_row )); then
+    printf -v _b4h_row '%*s' $(( _b4h_rows - _b4h_row )) ''
+    printf '%s' "${_b4h_row// /$'\n'}"
+  fi
+  unset _b4h_rows _b4h_row
+fi
+
 # --------------------------------------------------------- instant prompt ---
 # Powerlevel10k's instant prompt: the last prompt seen in this directory
 # appears now, while the rest loads; what loading prints is kept and shown

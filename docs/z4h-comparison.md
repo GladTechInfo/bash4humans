@@ -65,7 +65,7 @@ b4h; **n/a** = specific to zsh/macOS/iTerm2, nothing to port; **b4h+** = b4h has
 | Alt+H | run-help | manual page | same |
 | Alt+Left/Right/Up/Down (Shift+ on macOS) | cd back / forward / up / pick subdirectory | same | same |
 | Alt+R | fzf over persistent directory history | same (also `cdh`) | same |
-| Ctrl+L / Ctrl+Alt+L | soft clear (scrollback kept) / hard clear, prompt at top or bottom | clear-screen | partial |
+| Ctrl+L / Ctrl+Alt+L | soft clear (scrollback kept) / hard clear, prompt at top or bottom | same: soft / hard clear, prompt at top or (`B4H_PROMPT_AT_BOTTOM=yes`) bottom; no tmux needed | same |
 | macOS keyboard layout (`keyboard mac`) | — | n/a here |
 | — | Alt+S toggle sudo, Ctrl+T files, Alt+C cd (fzf) | b4h+ |
 
@@ -105,7 +105,7 @@ b4h; **n/a** = specific to zsh/macOS/iTerm2, nothing to port; **b4h+** = b4h has
 | `term-shell-integration` (OSC 133) | same (p10k's TERM_SHELL_INTEGRATION, on) | same |
 | OSC 7 current directory | same | same |
 | title: configurable, while idle and while a command runs (local / ssh) | same: `B4H_TITLE_IDLE`, `B4H_TITLE_RUNNING` (bash prompt escapes, `$B4H_COMMAND`), z4h's defaults | same |
-| `prompt-at-bottom` | — | missing |
+| `prompt-at-bottom` | `B4H_PROMPT_AT_BOTTOM=yes`: at start (ESC[6n asks the terminal where the cursor is) and after Ctrl+L | same |
 | `term-vresize` (redraw on vertical resize) | — | missing |
 | clipboard: `x`, `c`, `v` | only planned (fn/notes.md), not in v5 | `x`, `c`, `v`: desktop tools, OSC 52 over SSH | b4h+ |
 | `-z4h-fix-locale` (pick a UTF-8 locale when none is set) | `lib/locale.bash`: same order (C.UTF-8, en_US.UTF-8, first UTF-8); `B4H_FIX_LOCALE=no` off; `b4h doctor` says when it acted | same |
@@ -133,4 +133,4 @@ What remains:
 3. ~~SSH: automatic per-host teleportation, history retrieval, terminfo.~~ Done 2026-11-23 (`B4H_SSH_HOSTS`, `B4H_SSH_RETRIEVE_HISTORY`, terminfo); still missing: retrieve-extra-files, a configure hook, `term` per host.
 4. ~~Tab: fzf completion with multi-select~~ Done 2026-11-23 (`B4H_TAB=fzf`, `lib/completion.bash`); `recurse-dirs` left out.
 5. ~~Plugins from any GitHub repository (`b4h install user/repo`).~~ Done 2026-11-23 (`lib/repos.bash`).
-6. prompt-at-bottom and soft/hard clear (z4h needs its integrated tmux for these).
+6. ~~prompt-at-bottom and soft/hard clear~~ Done 2026-11-23 (`lib/keys.bash`, `b4h.bash`; no tmux needed).

@@ -53,7 +53,7 @@ Your old startup files are copied to `~/bash-backup/<date>/`, and the old
 | **History** | unlimited, timestamped, shared live between open shells; **Up/Down** entries containing what is typed, from this shell's history (what other shells add meanwhile is left out, as in zsh4humans), **Ctrl+Up/Down** entries starting with it, from all shells |
 | **Prompt** | Powerlevel10k: lean, classic, rainbow, pure; all its segments and settings, instant and transient prompt - see below |
 | **Directories** | **Alt+Left/Right** back/forward, **Alt+Up** parent, **Alt+Down** pick a subdirectory; **Alt+R** (or `cdh`, `cd -`+TAB) any directory you have been to, in any shell; `dirh`, `prevd`, `nextd`; type a directory name to enter it |
-| **Editing** | **Ctrl+Backspace** delete word, **Ctrl+Alt+Backspace** shell word, **Ctrl+Shift+Left/Right/Delete** move or delete by shell word, **Ctrl+/** or **Shift+Tab** undo, **Alt+/** redo, **Alt+J** clear the line, **Alt+O** put it aside (Up brings it back), **Ctrl+Space** expand the word (alias, `~`, `$VAR`, glob), **Alt+S** toggle sudo, **Alt+H** manual page |
+| **Editing** | **Ctrl+L** clear the screen (it moves into the scrollback), **Ctrl+Alt+L** clear the scrollback too, **Ctrl+Backspace** delete word, **Ctrl+Alt+Backspace** shell word, **Ctrl+Shift+Left/Right/Delete** move or delete by shell word, **Ctrl+/** or **Shift+Tab** undo, **Alt+/** redo, **Alt+J** clear the line, **Alt+O** put it aside (Up brings it back), **Ctrl+Space** expand the word (alias, `~`, `$VAR`, glob), **Alt+S** toggle sudo, **Alt+H** manual page |
 | **Clipboard** | `... \| x` cut, `... \| c` copy (and pass on), `v` paste; over SSH copying reaches your own machine's clipboard (OSC 52) |
 | **Abbreviations** | `abbr -a gco git checkout` expands as you type, so history shows the real command |
 | **Unknown commands** | "did you mean", and the package that provides it (with `pkgfile` / `command-not-found`) |
@@ -227,6 +227,7 @@ default is in [`lib/settings.bash`](lib/settings.bash).
 | `B4H_AUTO_UPDATE` | `ask` (template) | offer an update every `B4H_AUTO_UPDATE_DAYS` (28) |
 | `B4H_START_TMUX` / `B4H_DIRENV` | `no` | |
 | `B4H_FIX_LOCALE` | `yes` | with no UTF-8 locale in effect (none set, `C`, or one not installed), set `LC_ALL` to `C.UTF-8` (else `en_US.UTF-8`, else another UTF-8 locale), as zsh4humans does; `no`: leave it |
+| `B4H_PROMPT_AT_BOTTOM` | `no` | `yes`: the prompt starts on the last row - when the shell starts (the terminal is asked where the cursor is) and after Ctrl+L / Ctrl+Alt+L - as zsh4humans' `prompt-at-bottom` |
 | `B4H_WIZARD` | `yes` | `no`: no wizard on the first start (p10k's defaults until `b4h configure`) |
 
 `B4H_PROFILE=1 bash` prints how long each start-up step takes.

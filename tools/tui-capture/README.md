@@ -13,6 +13,9 @@ zsh through it and compares the two screens cell by cell;
     SPEC: {"cmd": ["bash", "-i"], "rows": 24, "cols": 80, "env": {"TERM": "xterm-256color"},
            "steps": [{"wait": 3}, {"keys": "ls\r"}, {"snap": "screen"}, ...]}
 
+`"answer_cpr": true` makes it answer the cursor-position query `ESC[6n` as a
+terminal does (off by default).
+
 Steps: `wait` reads the program's output for N seconds; `keys` types text
 or one named key (`<up> <down> <left> <right> <home> <end> <enter> <tab> <bs>
 <esc> <del>`, with modifiers `<S-up>`, `<A-left>`, `<C-right>`, `<S-tab>`, or

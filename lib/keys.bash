@@ -12,6 +12,7 @@
 #    Ctrl+Shift+Left/Right  shell word left / right   Ctrl+Shift+Delete  delete shell word right
 #    Ctrl+/ , Shift+Tab     undo                      Alt+/   redo (ble.sh)
 #    Alt+J                  clear the command line    Alt+O   stash it (back with Up)
+#    Ctrl+L / Ctrl+Alt+L    clear the screen: soft (into the scrollback) / hard (scrollback too)
 #    Ctrl+Space             expand the word: alias, ~, $VAR, glob
 #    Alt+Left / Right       previous / next directory
 #    Alt+Up / Down          parent directory / pick a subdirectory
@@ -27,6 +28,40 @@ _b4h_key_forward() { _b4h_cd_forward && _b4h_prompt_refresh; return 0; }
 _b4h_key_up()      { _b4h_cd_up      && _b4h_prompt_refresh; return 0; }
 _b4h_key_down()    { _b4h_cd_down    && _b4h_prompt_refresh; return 0; }
 _b4h_key_dirhist() { _b4h_cd_history && _b4h_prompt_refresh; return 0; }
+
+# Ctrl+L / Ctrl+Alt+L, as zsh4humans: soft clear (what is on the screen moves
+# into the scrollback) / hard clear (the scrollback is erased too). The
+# prompt then starts on the top row, or with B4H_PROMPT_AT_BOTTOM=yes on the
+# rows at the bottom.
+_b4h_clear_seq() {      # soft|hard -> REPLY: what to print; the cursor ends
+  local rows=${LINES:-24} s nl  # where the prompt's first line goes
+  if [[ $1 == hard ]]; then
+    s=$'\e[H\e[2J\e[3J'
+  else
+    # from the last row, one newline per row scrolls everything away
+    printf -v nl '%*s' "$rows" ''
+    printf -v s '\e[%dH%s' "$rows" "${nl// /$'\n'}"
+  fi
+  if [[ $B4H_PROMPT_AT_BOTTOM == yes ]]; then
+    local lines=${_p9k_ps1//[!$'\n']/}       # the prompt's height: its line breaks + 1
+    local top=$(( rows - ${#lines} ))
+    (( top >= 1 )) || top=1
+    s+=$'\e['"$top"'H'
+  else
+    s+=$'\e[H'
+  fi
+  REPLY=$s
+}
+# readline: print it, then the prompt's upper lines (readline itself redraws
+# only the last one, on the row the cursor is on)
+_b4h_key_clear() {
+  _b4h_clear_seq "$1"
+  printf '%s' "$REPLY"
+  local ps=${_p9k_ps1//[$'\001\002']/} i
+  local -a l=()
+  mapfile -t l <<<"$ps"
+  for (( i = 0; i < ${#l[@]} - 1; i++ )); do printf '\e[2K%s\n' "${l[i]}"; done
+}
 
 # Alt+O (zsh4humans' z4h-stash-buffer): the line goes into the history
 # without running, and the line is cleared. Up brings it back.
@@ -185,6 +220,24 @@ if (( _b4h_ble )); then
   function ble/widget/b4h-up-global    { _b4h_hist_local=0; ble/widget/history-search-backward; }
   function ble/widget/b4h-down-global  { _b4h_hist_local=0; ble/widget/history-search-forward; }
 
+  # Ctrl+L / Ctrl+Alt+L under ble.sh: as ble.sh's own clear-screen, with
+  # the soft or hard sequence and the prompt's row from _b4h_clear_seq
+  _b4h_ble_clear() {
+    ble-edit/content/clear-arg
+    ble/edit/enter-command-layout
+    ble/textarea#invalidate
+    local -a DRAW_BUFF=()
+    ble/canvas/panel/goto-top-dock.draw
+    ble/canvas/bflush.draw
+    local REPLY; _b4h_clear_seq "$1"
+    ble/util/buffer "$REPLY"
+    _ble_canvas_x=0 _ble_canvas_y=0
+    ble/term/visible-bell/cancel-erasure
+    ble/edit/leave-command-layout
+  }
+  function ble/widget/b4h-clear-soft { _b4h_ble_clear soft; }
+  function ble/widget/b4h-clear-hard { _b4h_ble_clear hard; }
+
   # Alt+O: into ble.sh's own history list (ble.sh keeps it, not bash)
   _b4h_key_stash_ble() {
     [[ -n $READLINE_LINE ]] || return 0
@@ -213,6 +266,8 @@ if (( _b4h_ble )); then
     ble-bind -f C-up     b4h-up-global
     ble-bind -f C-down   b4h-down-global
     ble-bind -f M-j      b4h-kill-buffer
+    ble-bind -f C-l      b4h-clear-soft
+    ble-bind -f C-M-l    b4h-clear-hard
     ble-bind -x M-o      _b4h_key_stash_ble
     ble-bind -x C-@      _b4h_key_expand
     ble-bind -x C-SP     _b4h_key_expand
@@ -268,5 +323,7 @@ else
   bind -x '"\er": _b4h_key_dirhist'
   bind -x '"\es": _b4h_key_sudo'
   bind -x '"\eh": _b4h_key_help'
+  bind -x '"\C-l": _b4h_key_clear soft'
+  bind -x '"\e\C-l": _b4h_key_clear hard'
   bind '"\e[0n": redraw-current-line'   # after fzf in a completion (cd -<Tab>)
 fi
