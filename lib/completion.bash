@@ -72,13 +72,51 @@ _b4h_fzf_tab_setup() {
     local ret; ble/util/c2w 0x2500
     ((ret == 1)) || opts+=(--no-unicode)
     [[ :$comp_type: == *:i:* ]] && opts+=(--ignore-case)
+    # B4H_TAB_RECURSE=yes (zsh4humans' recurse-dirs): for each directory
+    # offered, what is under it too, as items "r:PATH" (not one of ble.sh's
+    # numbered candidates); .git skipped, depth and number capped.
+    local -a extra=()
+    if [[ $B4H_TAB_RECURSE == yes ]]; then
+      # ble.sh gives the candidates with ~ expanded; what was typed (COMPS)
+      # says whether to write ~/ again
+      local i dir path ins kind tilde=
+      [[ ${COMPS-} == '~'* ]] && tilde=1
+      for (( i = 0; i < ${#cand_cand[@]}; i++ )); do
+        dir=${cand_cand[i]}
+        # shellcheck disable=SC2088  # a literal ~/, on purpose
+        [[ $dir == '~/'* ]] && dir=$HOME/${dir#\~/}
+        [[ -d $dir ]] || continue
+        while IFS= read -r path; do
+          kind=file; [[ -d $path ]] && kind=directory
+          # shown as ble.sh shows its own (expanded, matching the query);
+          # inserted with ~/ again when ~ was typed
+          ins=$path
+          # shellcheck disable=SC2088
+          [[ -n $tilde && $path == "$HOME"/* ]] && ins='~/'${path#"$HOME"/}
+          extra+=("r:$ins$sep$path$sep - $kind")
+        done < <(find "$dir" -mindepth 1 -maxdepth "$B4H_TAB_RECURSE_DEPTH" -name .git -prune -o -print 2>/dev/null |
+                 head -n "$B4H_TAB_RECURSE_MAX")
+      done
+    fi
     local -a picked
-    mapfile -t picked < <(builtin eval -- "printf '%s\n' \"\$@\"$_ble_contrib_fzf_menu_filter" | fzf "${opts[@]}" | cut -d "$sep" -f 1)
-    if (( ${#picked[@]} == 1 )); then
-      printf '%s\n' "${picked[0]}"               # one: ble.sh inserts it
-    elif (( ${#picked[@]} > 1 )); then
-      local i
-      for i in "${picked[@]}"; do printf '%s\n' "${cand_word[i]}"; done >"$_b4h_fzf_tab_picks"
+    mapfile -t picked < <({ builtin eval -- "printf '%s\n' \"\$@\"$_ble_contrib_fzf_menu_filter"
+                             (( ${#extra[@]} )) && printf '%s\n' "${extra[@]}"; } | fzf "${opts[@]}" | cut -d "$sep" -f 1)
+    if (( ${#picked[@]} == 1 )) && [[ ${picked[0]} != r:* ]]; then
+      printf '%s\n' "${picked[0]}"               # one of ble.sh's: ble.sh inserts it
+    elif (( ${#picked[@]} )); then
+      # several, or a path from below a directory: inserted after ble.sh's
+      # step, each quoted (a ~/ typed stays ~/)
+      local p q
+      for p in "${picked[@]}"; do
+        if [[ $p == r:* ]]; then
+          p=${p#r:}
+          # shellcheck disable=SC2088
+          if [[ $p == '~/'* ]]; then printf -v q '%q' "${p#\~/}"; q="~/$q"; else printf -v q '%q' "$p"; fi
+          printf '%s\n' "$q"
+        else
+          printf '%s\n' "${cand_word[p]}"
+        fi
+      done >"$_b4h_fzf_tab_picks"
     fi
   }
   # After ble.sh's step: several picks replace the word being completed,

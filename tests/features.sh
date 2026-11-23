@@ -321,6 +321,16 @@ FAKE
     check "fzf Tab: Enter inserts one $e" "$ok" "$last"
   fi
 
+  if want fzf-tab && [[ $e == ble ]]; then
+    # B4H_TAB_RECURSE=yes: files under the directories offered are listed
+    # too; a pick from there is inserted with its path, quoted.
+    { echo 'B4H_TAB=fzf B4H_TAB_RECURSE=yes'; cat "$d/rc"; } >"$d/rc-recurse"
+    RC=$d/rc-recurse run_screen fzf-tab-recurse "$e" 'ls ' '\t' '@20' 'b 3' '@10' '\r' '@10'
+    last=$(grep '❯' <<<"$SCREEN" | tail -1)
+    ok=1; [[ $last == *'ls files/b\ 3.txt'* ]] && ok=0
+    check "fzf Tab: B4H_TAB_RECURSE lists files under directories $e" "$ok" "$last"
+  fi
+
   if want clear; then
     # Ctrl+L: the screen is cleared, the line kept; the prompt on the first
     # row, or with B4H_PROMPT_AT_BOTTOM=yes on the last (also at start, when

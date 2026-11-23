@@ -17,6 +17,9 @@
 
 # ------------------------------------------------------------ completion ---
 : "${B4H_TAB:=menu}"                  # menu: ble.sh's menu with descriptions | fzf: fzf picker
+: "${B4H_TAB_RECURSE:=no}"            # yes (with B4H_TAB=fzf): directories offered also list what is under them (zsh4humans' recurse-dirs)
+: "${B4H_TAB_RECURSE_DEPTH:=4}"       #   how deep, and at most how many paths
+: "${B4H_TAB_RECURSE_MAX:=2000}"
 : "${B4H_SUGGEST_ACCEPT:=all}"        # Right arrow takes the whole suggestion (all) or one word (word)
 : "${B4H_CNF_SUGGEST:=yes}"           # unknown command: "did you mean" and which package has it
 

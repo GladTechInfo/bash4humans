@@ -60,7 +60,7 @@ b4h; **n/a** = specific to zsh/macOS/iTerm2, nothing to port; **b4h+** = b4h has
 | Alt+M | accept the whole suggestion | same (ble.sh) | same |
 | Ctrl+/ , Shift+Tab / Alt+/ | undo / redo | same | same |
 | Ctrl+Space | expand aliases, globs, parameters in place | alias, `~`, `$NAME`/`${NAME}`, glob; `$(...)` and other expansions are left alone (they would run code) | partial (on purpose) |
-| Tab | fzf completion (Ctrl+Space multi-select, Ctrl+A all, `recurse-dirs`, `fzf-bindings`) | ble.sh menu; `B4H_TAB=fzf`: fzf with Ctrl+Space / Ctrl+A multi-select, Tab / Shift+Tab, Alt+J; no `recurse-dirs` (off in z4h's own template) | partial |
+| Tab | fzf completion (Ctrl+Space multi-select, Ctrl+A all, `recurse-dirs`, `fzf-bindings`) | ble.sh menu; `B4H_TAB=fzf`: fzf with Ctrl+Space / Ctrl+A multi-select, Tab / Shift+Tab, Alt+J; `B4H_TAB_RECURSE=yes` for `recurse-dirs` | same |
 | Ctrl+R | fzf history (optional preview) | fzf history | same |
 | Alt+H | run-help | manual page | same |
 | Alt+Left/Right/Up/Down (Shift+ on macOS) | cd back / forward / up / pick subdirectory | same | same |
@@ -131,6 +131,6 @@ What remains:
    per-session list in bash).
 2. ~~Locale fix-up (UTF-8 when none is set).~~ Done 2026-11-23 (`lib/locale.bash`).
 3. ~~SSH: automatic per-host teleportation, history retrieval, terminfo.~~ Done 2026-11-23 (`B4H_SSH_HOSTS`, `B4H_SSH_RETRIEVE_HISTORY`, terminfo); then (v0.3.7) retrieve-extra-files, a configure hook and `term` per host (`B4H_SSH_RETRIEVE_FILES`, `b4h_ssh_configure`, `B4H_SSH_TERM`, `B4H_SSH_PRELUDE`).
-4. ~~Tab: fzf completion with multi-select~~ Done 2026-11-23 (`B4H_TAB=fzf`, `lib/completion.bash`); `recurse-dirs` left out.
+4. ~~Tab: fzf completion with multi-select~~ Done 2026-11-23 (`B4H_TAB=fzf`, `lib/completion.bash`); `recurse-dirs` too (v0.3.8, `B4H_TAB_RECURSE`).
 5. ~~Plugins from any GitHub repository (`b4h install user/repo`).~~ Done 2026-11-23 (`lib/repos.bash`).
 6. ~~prompt-at-bottom and soft/hard clear~~ Done 2026-11-23 (`lib/keys.bash`, `b4h.bash`; no tmux needed).

@@ -212,6 +212,7 @@ default is in [`lib/settings.bash`](lib/settings.bash).
 | `B4H_GREETING` | | a command run at start, e.g. `fastfetch` |
 | `B4H_PLUGINS` | `()` | plugins to load |
 | `B4H_TAB` | `menu` | `fzf`: TAB opens fzf (as zsh4humans): Ctrl+Space marks, Ctrl+A marks all, Enter inserts the marked entries (or the one under the cursor); Tab / Shift+Tab move |
+| `B4H_TAB_RECURSE` | `no` | `yes` (with `B4H_TAB=fzf`): directories offered also list the paths under them (depth `B4H_TAB_RECURSE_DEPTH`=4, at most `B4H_TAB_RECURSE_MAX`=2000; `.git` skipped), as zsh4humans' `recurse-dirs` |
 | `B4H_SUGGEST_ACCEPT` | `all` | `word`: Right takes one word |
 | `B4H_SHELL_INTEGRATION` | `yes` | OSC 7 / OSC 133 for the terminal (p10k's `TERM_SHELL_INTEGRATION`, switched on) |
 | `B4H_TITLE` | `yes` | set the window title: `B4H_TITLE_IDLE` at the prompt (`'\w'`), `B4H_TITLE_RUNNING` while a command runs (`'$B4H_COMMAND'`); over SSH both start with `\u@\h: ` |
