@@ -16,7 +16,7 @@ _b4h_loaded=1
 
 B4H_ROOT=${BASH_SOURCE[0]%/*}
 [[ $B4H_ROOT == /* ]] || B4H_ROOT=$PWD/$B4H_ROOT
-B4H_VERSION=0.3.5
+B4H_VERSION=0.3.6
 
 # B4H_PROFILE=1 bash : print how long each start-up step takes.
 _b4h_t=${EPOCHREALTIME//[.,]/}
