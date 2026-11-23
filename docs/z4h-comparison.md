@@ -60,7 +60,7 @@ b4h; **n/a** = specific to zsh/macOS/iTerm2, nothing to port; **b4h+** = b4h has
 | Alt+M | accept the whole suggestion | same (ble.sh) | same |
 | Ctrl+/ , Shift+Tab / Alt+/ | undo / redo | same | same |
 | Ctrl+Space | expand aliases, globs, parameters in place | alias, `~`, `$NAME`/`${NAME}`, glob; `$(...)` and other expansions are left alone (they would run code) | partial (on purpose) |
-| Tab | fzf completion (Ctrl+Space multi-select, Ctrl+A all, `recurse-dirs`, `fzf-bindings`) | ble.sh menu; `B4H_TAB=fzf` for fzf | partial |
+| Tab | fzf completion (Ctrl+Space multi-select, Ctrl+A all, `recurse-dirs`, `fzf-bindings`) | ble.sh menu; `B4H_TAB=fzf`: fzf with Ctrl+Space / Ctrl+A multi-select, Tab / Shift+Tab, Alt+J; no `recurse-dirs` (off in z4h's own template) | partial |
 | Ctrl+R | fzf history (optional preview) | fzf history | same |
 | Alt+H | run-help | manual page | same |
 | Alt+Left/Right/Up/Down (Shift+ on macOS) | cd back / forward / up / pick subdirectory | same | same |
@@ -131,6 +131,6 @@ What remains:
    per-session list in bash).
 2. ~~Locale fix-up (UTF-8 when none is set).~~ Done 2026-11-23 (`lib/locale.bash`).
 3. ~~SSH: automatic per-host teleportation, history retrieval, terminfo.~~ Done 2026-11-23 (`B4H_SSH_HOSTS`, `B4H_SSH_RETRIEVE_HISTORY`, terminfo); still missing: retrieve-extra-files, a configure hook, `term` per host.
-4. Tab: fzf completion with multi-select / recurse-dirs as z4h's (B4H_TAB=fzf is simpler).
+4. ~~Tab: fzf completion with multi-select~~ Done 2026-11-23 (`B4H_TAB=fzf`, `lib/completion.bash`); `recurse-dirs` left out.
 5. ~~Plugins from any GitHub repository (`b4h install user/repo`).~~ Done 2026-11-23 (`lib/repos.bash`).
 6. prompt-at-bottom and soft/hard clear (z4h needs its integrated tmux for these).

@@ -293,6 +293,20 @@ FAKE
     check "ssh: the session's history comes back $e" "$ok" "$(cat "$d/remote-hist" 2>&1)"
   fi
 
+  if want fzf-tab && [[ $e == ble ]]; then
+    # B4H_TAB=fzf: Ctrl+A marks every file, Enter inserts them all, quoted;
+    # a single Enter inserts the entry under the cursor (ble.sh's own way).
+    { echo 'B4H_TAB=fzf'; cat "$d/rc"; } >"$d/rc-fzf"
+    RC=$d/rc-fzf run_screen fzf-tab-all "$e" 'cd files\r' 'ls ' '\t' '@20' '\x01' '\r' '@10'
+    last=$(grep '❯' <<<"$SCREEN" | tail -1)
+    ok=1; [[ $last == *'ls a1.txt a2.txt b\ 3.txt'* ]] && ok=0
+    check "fzf Tab: Ctrl+A inserts every pick $e" "$ok" "$last"
+    RC=$d/rc-fzf run_screen fzf-tab-one "$e" 'cd files\r' 'ls ' '\t' '@20' '\r' '@10'
+    last=$(grep '❯' <<<"$SCREEN" | tail -1)
+    ok=1; [[ $last =~ ls\ (a1|a2)\.txt\ *$|ls\ b\\\ 3\.txt\ *$ ]] && ok=0
+    check "fzf Tab: Enter inserts one $e" "$ok" "$last"
+  fi
+
   if want locale; then
     # The shell started with a clean environment (no terminal needed: the fix
     # runs before the line editor); "é" is one character only in UTF-8.

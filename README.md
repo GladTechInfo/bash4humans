@@ -48,7 +48,7 @@ Your old startup files are copied to `~/bash-backup/<date>/`, and the old
 |---|---|
 | **Suggestions** | grey text from history as you type; **Right**, **Ctrl+F** or **Alt+M** takes it |
 | **Highlighting** | commands, options, strings, paths; unknown commands in red |
-| **Completion** | TAB menu with a description per entry; option names read from man pages; `**`+TAB fuzzy |
+| **Completion** | TAB menu with a description per entry; option names read from man pages; `**`+TAB fuzzy; with `B4H_TAB=fzf`, TAB opens fzf as in zsh4humans: **Ctrl+Space** marks entries, **Ctrl+A** all, Enter inserts them |
 | **Fuzzy finder** | **Ctrl+R** history, **Ctrl+T** files, **Alt+C** cd (fzf) |
 | **History** | unlimited, timestamped, shared live between open shells; **Up/Down** entries containing what is typed, from this shell's history (what other shells add meanwhile is left out, as in zsh4humans), **Ctrl+Up/Down** entries starting with it, from all shells |
 | **Prompt** | Powerlevel10k: lean, classic, rainbow, pure; all its segments and settings, instant and transient prompt - see below |
@@ -211,7 +211,7 @@ default is in [`lib/settings.bash`](lib/settings.bash).
 | `B4H_LINE_EDITOR` | `ble` | `readline` for plain bash editing (no suggestions/highlighting, ~60 ms start instead of ~300 ms) |
 | `B4H_GREETING` | | a command run at start, e.g. `fastfetch` |
 | `B4H_PLUGINS` | `()` | plugins to load |
-| `B4H_TAB` | `menu` | `fzf` for an fzf picker on TAB |
+| `B4H_TAB` | `menu` | `fzf`: TAB opens fzf (as zsh4humans): Ctrl+Space marks, Ctrl+A marks all, Enter inserts the marked entries (or the one under the cursor); Tab / Shift+Tab move |
 | `B4H_SUGGEST_ACCEPT` | `all` | `word`: Right takes one word |
 | `B4H_SHELL_INTEGRATION` | `yes` | OSC 7 / OSC 133 for the terminal (p10k's `TERM_SHELL_INTEGRATION`, switched on) |
 | `B4H_TITLE` | `yes` | set the window title: `B4H_TITLE_IDLE` at the prompt (`'\w'`), `B4H_TITLE_RUNNING` while a command runs (`'$B4H_COMMAND'`); over SSH both start with `\u@\h: ` |
