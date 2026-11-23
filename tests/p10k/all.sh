@@ -3,6 +3,9 @@
 # (they share the terminal capture tool; do not edit the tested files while
 # this runs). Full output in $B4H_TEST_DIR/all-<suite>.txt; a summary at the end.
 T=${B4H_TEST_DIR:-/tmp/b4h-test}; mkdir -p "$T"
+# golden.sh writes its logs here; the matrix suites run before segments.sh,
+# which used to be the only one to create it (a clean /tmp failed them all)
+mkdir -p "$T/golden"
 here=$(cd "${BASH_SOURCE[0]%/*}" && pwd)
 suites=(unit-parser unit-battery unit-wifi unit-colors unit-osc133 matrix matrix-git matrix-wizard segments ble display async instant wrap)
 for s in "${suites[@]}"; do

@@ -27,7 +27,10 @@ compare bash4humans with the real thing in zsh, or type into a real terminal.
 - **jq**, **git**, `script` (util-linux), and **b4h-tool** on `PATH` or in
   `~/.cache/bash4humans/deps/bin`.
 
-Results and screens go to `$B4H_TEST_DIR` (default `/tmp/b4h-test`).
+Results and screens go to `$B4H_TEST_DIR` (default `/tmp/b4h-test`);
+`p10k/all.sh` creates it and its `golden/` log directory, so an emptied `/tmp`
+(after a reboot) is fine. Running one matrix suite on its own:
+`mkdir -p /tmp/b4h-test/golden` first.
 
 ## Rules learnt the hard way
 
