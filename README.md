@@ -204,6 +204,7 @@ default is in [`lib/settings.bash`](lib/settings.bash).
 | `B4H_SSH_SEND_FILES` | `()` | extra files `b4h ssh` copies (never overwrites the host's) |
 | `B4H_AUTO_UPDATE` | `ask` (template) | offer an update every `B4H_AUTO_UPDATE_DAYS` (28) |
 | `B4H_START_TMUX` / `B4H_DIRENV` | `no` | |
+| `B4H_FIX_LOCALE` | `yes` | with no UTF-8 locale in effect (none set, `C`, or one not installed), set `LC_ALL` to `C.UTF-8` (else `en_US.UTF-8`, else another UTF-8 locale), as zsh4humans does; `no`: leave it |
 | `B4H_WIZARD` | `yes` | `no`: no wizard on the first start (p10k's defaults until `b4h configure`) |
 
 `B4H_PROFILE=1 bash` prints how long each start-up step takes.

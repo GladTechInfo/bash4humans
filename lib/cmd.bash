@@ -72,6 +72,11 @@ _b4h_doctor() {
   else printf '  %s git          gitstatus missing; the prompt uses git status (slower in big repositories)\n' "$no"; fi
   if [[ -r $_b4h_p_conf ]]; then printf '  %s prompt       %s\n               %s\n' "$ok" "${_b4h_p_conf/#"$HOME"/\~}" "$(_b4h_cfg_summary)"
   else printf '  %s prompt       not configured yet (p10k defaults): b4h configure\n' "$no"; fi
+  if [[ -n ${_b4h_locale_fixed-} ]]; then
+    printf '  %s locale       LC_ALL=%s: no UTF-8 locale was in effect (B4H_FIX_LOCALE)\n' "$ok" "$_b4h_locale_fixed"
+  elif ! _b4h_locale_is_utf8; then
+    printf '  %s locale       not UTF-8 and no UTF-8 locale installed: line editing and glyphs suffer\n' "$no"
+  fi
   _p9k_codeset_is_utf8 || printf '  %s glyphs       the locale is not UTF-8: p10k uses ASCII\n' "$no"
   (( ${_p9k__tc_colors:-256} >= 256 )) ||
     printf '  %s colours      %s in this terminal (TERM=%s): colours above that show as the default\n' "$no" "$_p9k__tc_colors" "$TERM"

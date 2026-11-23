@@ -108,7 +108,7 @@ b4h; **n/a** = specific to zsh/macOS/iTerm2, nothing to port; **b4h+** = b4h has
 | `prompt-at-bottom` | — | missing |
 | `term-vresize` (redraw on vertical resize) | — | missing |
 | clipboard: `x`, `c`, `v` | only planned (fn/notes.md), not in v5 | `x`, `c`, `v`: desktop tools, OSC 52 over SSH | b4h+ |
-| `-z4h-fix-locale` (pick a UTF-8 locale when none is set) | — | missing |
+| `-z4h-fix-locale` (pick a UTF-8 locale when none is set) | `lib/locale.bash`: same order (C.UTF-8, en_US.UTF-8, first UTF-8); `B4H_FIX_LOCALE=no` off; `b4h doctor` says when it acted | same |
 | WSL: `$z4h_win_home`, `~w` | — | missing (no named dirs in bash; a variable is possible) |
 | macOS: Homebrew paths, iTerm2 integration | — | n/a here |
 | LS_COLORS, LESS, TREE_COLORS | LS_COLORS (dircolors), LESS, PAGER | partial (TREE_COLORS) |
@@ -129,7 +129,7 @@ What remains:
 
 1. Local vs global history (Up/Down this session's commands first; needs a
    per-session list in bash).
-2. Locale fix-up (UTF-8 when none is set).
+2. ~~Locale fix-up (UTF-8 when none is set).~~ Done 2026-11-23 (`lib/locale.bash`).
 3. SSH: automatic per-host teleportation, history retrieval, terminfo.
 4. Tab: fzf completion with multi-select / recurse-dirs as z4h's (B4H_TAB=fzf is simpler).
 5. Plugins from any GitHub repository (`b4h install user/repo`).

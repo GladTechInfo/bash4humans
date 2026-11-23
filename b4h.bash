@@ -28,6 +28,7 @@ _b4h_mark() {
 }
 
 . "$B4H_ROOT/lib/settings.bash"
+. "$B4H_ROOT/lib/locale.bash"      # UTF-8 when the locale is not (before tmux and ble.sh)
 . "$B4H_ROOT/lib/deps.bash"
 _b4h_deps_at_start=1 _b4h_deps_ensure    # (downloads, but no cargo build at start)
 _b4h_mark deps

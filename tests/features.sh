@@ -207,6 +207,22 @@ for e in ble readline; do
     grep -qx 'pasted-7' <<<"$SCREEN" && grep -qx 'PASTED-7' <<<"$SCREEN"
     check "c, v $e" $? 'copy/paste round trip'
   fi
+
+  if want locale; then
+    # The shell started with a clean environment (no terminal needed: the fix
+    # runs before the line editor); "é" is one character only in UTF-8.
+    probe='x=$'"'"'\xc3\xa9'"'"'; echo "chars=${#x} lc_all=${LC_ALL-unset} fixed=${_b4h_locale_fixed-}"'
+    locale_run() { env -i HOME="$HOME" PATH="$PATH" TERM=xterm "$@" bash --rcfile "$d/rc" -i -c "$probe" 2>/dev/null </dev/null | tail -1; }
+    r=$(locale_run)
+    [[ $r == "chars=1 "* && $r != *fixed= ]]
+    check "locale: none set -> UTF-8 $e" $? "$r"
+    r=$(locale_run LANG=C.UTF-8)
+    [[ $r == "chars=1 lc_all=unset fixed=" ]]
+    check "locale: UTF-8 left alone $e" $? "$r"
+    r=$(locale_run LANG=C B4H_FIX_LOCALE=no)
+    [[ $r == "chars=2 lc_all=unset fixed=" ]]
+    check "locale: B4H_FIX_LOCALE=no $e" $? "$r"
+  fi
 done
 
 echo
