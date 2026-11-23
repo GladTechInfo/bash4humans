@@ -214,14 +214,14 @@ for e in ble readline; do
     probe='x=$'"'"'\xc3\xa9'"'"'; echo "chars=${#x} lc_all=${LC_ALL-unset} fixed=${_b4h_locale_fixed-}"'
     locale_run() { env -i HOME="$HOME" PATH="$PATH" TERM=xterm "$@" bash --rcfile "$d/rc" -i -c "$probe" 2>/dev/null </dev/null | tail -1; }
     r=$(locale_run)
-    [[ $r == "chars=1 "* && $r != *fixed= ]]
-    check "locale: none set -> UTF-8 $e" $? "$r"
+    ok=1; [[ $r == "chars=1 "* && $r != *fixed= ]] && ok=0
+    check "locale: none set -> UTF-8 $e" "$ok" "$r"
     r=$(locale_run LANG=C.UTF-8)
-    [[ $r == "chars=1 lc_all=unset fixed=" ]]
-    check "locale: UTF-8 left alone $e" $? "$r"
+    ok=1; [[ $r == "chars=1 lc_all=unset fixed=" ]] && ok=0
+    check "locale: UTF-8 left alone $e" "$ok" "$r"
     r=$(locale_run LANG=C B4H_FIX_LOCALE=no)
-    [[ $r == "chars=2 lc_all=unset fixed=" ]]
-    check "locale: B4H_FIX_LOCALE=no $e" $? "$r"
+    ok=1; [[ $r == "chars=2 lc_all=unset fixed=" ]] && ok=0
+    check "locale: B4H_FIX_LOCALE=no $e" "$ok" "$r"
   fi
 done
 
