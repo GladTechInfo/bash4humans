@@ -51,6 +51,7 @@ _b4h_plugins_cmd() {
           printf '  [%s] %-18s %s\n' "$mark" "$name" "$about"
         done
       done | sort -t "]" -k2
+      [[ $sub == list ]] && _b4h_repos_list
       ;;
     enable|disable)
       (( $# )) || { echo "usage: b4h plugins $sub NAME..." >&2; return 2; }

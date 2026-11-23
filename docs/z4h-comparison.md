@@ -26,7 +26,7 @@ b4h; **n/a** = specific to zsh/macOS/iTerm2, nothing to port; **b4h+** = b4h has
 
 | z4h | b4h | Status |
 |---|---|---|
-| `z4h install user/repo` (any GitHub repo, kept up to date) | — | missing |
+| `z4h install user/repo` (any GitHub repo, kept up to date) | `b4h install USER/REPO[@REF]`, `b4h load`, `b4h source`, `b4h uninstall`; `b4h update` updates them (`lib/repos.bash`) | same |
 | `z4h load` / `z4h source` (Oh My Zsh plugins, any file) | `B4H_PLUGINS=()`, own `~/.config/bash4humans/plugins/*.plugin.bash` | partial |
 | compatibility fixes for Oh My Zsh, forgit, fz, zsh-you-should-use | — | n/a (zsh plugins) |
 | — | bundled: extract, colored-man-pages, zoxide, ssh-agent, git-aliases, cht; `b4h plugins list/search/enable/disable` | b4h+ |
@@ -132,5 +132,5 @@ What remains:
 2. ~~Locale fix-up (UTF-8 when none is set).~~ Done 2026-11-23 (`lib/locale.bash`).
 3. SSH: automatic per-host teleportation, history retrieval, terminfo.
 4. Tab: fzf completion with multi-select / recurse-dirs as z4h's (B4H_TAB=fzf is simpler).
-5. Plugins from any GitHub repository (`b4h install user/repo`).
+5. ~~Plugins from any GitHub repository (`b4h install user/repo`).~~ Done 2026-11-23 (`lib/repos.bash`).
 6. prompt-at-bottom and soft/hard clear (z4h needs its integrated tmux for these).

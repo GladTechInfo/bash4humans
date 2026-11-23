@@ -11,6 +11,7 @@
 : "${B4H_AUTO_UPDATE_DAYS:=28}"
 : "${B4H_START_TMUX:=no}"             # yes: start (or attach to) tmux in every terminal
 : "${B4H_DIRENV:=no}"                 # yes: load .envrc files with direnv
+: "${B4H_GIT_BASE:=https://github.com}"  # where b4h install USER/REPO fetches from
 : "${B4H_FIX_LOCALE:=yes}"            # yes: no UTF-8 locale in effect -> LC_ALL=C.UTF-8 (or another UTF-8 one) | no
 
 # ------------------------------------------------------------ completion ---

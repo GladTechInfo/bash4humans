@@ -96,6 +96,7 @@ _b4h_mark clipboard
 . "$B4H_ROOT/lib/keys.bash"         # key bindings
 _b4h_mark keys
 . "$B4H_ROOT/lib/cmd.bash"          # the `b4h` command
+. "$B4H_ROOT/lib/repos.bash"       # b4h install/load/source: plugins from any GitHub repository
 . "$B4H_ROOT/lib/plugins.bash"      # B4H_PLUGINS, b4h plugins
 _b4h_plugins_load
 _b4h_mark plugins

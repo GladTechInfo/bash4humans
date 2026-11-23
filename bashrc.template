@@ -34,3 +34,4 @@ fi
 #   alias_suffix txt=nano md=less        # typing notes.txt opens it in nano
 #   add_path ~/bin
 #   md() { [[ $# == 1 ]] && mkdir -p -- "$1" && cd -- "$1"; }
+#   b4h install USER/REPO; b4h load USER/REPO   # a plugin from any GitHub repository

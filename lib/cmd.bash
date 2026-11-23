@@ -5,6 +5,7 @@
 #    b4h configure        choose the prompt's look (p10k configure); --from-p10k [FILE] converts ~/.p10k.zsh
 #    b4h prompt edit      adjust the prompt's settings by hand (reload: b4h prompt reload)
 #    b4h plugins          list, search, enable, disable plugins
+#    b4h install U/R[@REF] a plugin from any GitHub repository (load U/R[/DIR], source U/R/FILE, uninstall U/R)
 #    b4h doctor           what is loaded, what is missing
 #    b4h update           update bash4humans and its pinned components
 #    b4h ssh HOST [ARGS]  log in to HOST with bash4humans (nothing installed there for good)
@@ -22,6 +23,10 @@ b4h() {
     configure)      _b4h_configure "$@" ;;
     prompt)         _b4h_prompt_cmd "$@" ;;
     plugins)        _b4h_plugins_cmd "$@" ;;
+    install)        _b4h_repo_install "$@" ;;
+    load)           _b4h_repo_load "$@" ;;
+    source)         _b4h_repo_source "$@" ;;
+    uninstall)      _b4h_repo_uninstall "$@" ;;
     update)         _b4h_update ;;
     ssh)            _b4h_ssh "$@" ;;
     private)        B4H_PRIVATE=1 HISTFILE=/dev/null bash -i ;;
@@ -30,7 +35,7 @@ b4h() {
     *) echo "b4h: unknown command '$sub' (b4h help)" >&2; return 2 ;;
   esac
 }
-complete -W 'help configure prompt doctor update ssh private clipboard plugins version' b4h
+complete -W 'help configure prompt doctor update ssh private clipboard plugins install load source uninstall version' b4h
 
 _b4h_help() {
   sed -n '/^#    b4h help/,/^#    b4h version/p' "$B4H_ROOT/lib/cmd.bash" | sed 's/^#  //'
@@ -93,6 +98,7 @@ _b4h_update() {
     echo "b4h update: $B4H_ROOT is a development copy; not pulling"
   fi
   _b4h_deps_retry=1 _b4h_deps_ensure     # (components that failed are tried again)
+  _b4h_repos_update                      # repositories from b4h install
   printf '%(%s)T\n' -1 >"$B4H_HOME/.last-update"
   echo 'b4h update: done - open a new shell (or: exec bash) to use it'
 }

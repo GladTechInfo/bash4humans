@@ -182,6 +182,24 @@ Switch them on in `~/.bashrc` - `B4H_PLUGINS=(extract git-aliases)` - or with
 | `git-aliases` | `g gs ga gc gco gb gd gl gp gpl gst` as abbreviations |
 | `cht` | `cht TOPIC [QUERY]` - cheat sheets from cht.sh |
 
+**From any GitHub repository**, as zsh4humans' `z4h install`: in `~/.bashrc`,
+after bash4humans is loaded,
+
+```bash
+b4h install junegunn/fzf-git.sh               # downloaded once; later starts do nothing
+b4h source  junegunn/fzf-git.sh/fzf-git.sh    # source one file from it
+b4h install USER/REPO@v1.2                    # a branch, tag or commit instead of the default branch
+b4h load    USER/REPO[/DIR]                   # its NAME.plugin.bash (or NAME.bash, init.bash, ...); bin/ goes on PATH
+```
+
+Repositories are cloned one commit deep into `~/.cache/bash4humans/repos/`;
+`b4h update` brings each up to date (its branch, or the REF given), `b4h plugins`
+lists them, `b4h uninstall USER/REPO` deletes one. A download that fails is
+reported once and not tried at every start (`b4h update` tries again). The code
+runs in your shell, as any plugin's does: install what you trust. Plugins are
+sourced inside a function, so a `declare` at their top level makes a local
+variable (plain assignments, functions, aliases and exports are unaffected).
+
 ## Settings
 
 Set in `~/.bashrc` before bash4humans is loaded; every setting and its
@@ -203,6 +221,7 @@ default is in [`lib/settings.bash`](lib/settings.bash).
 | `B4H_NOTIFY_MIN` | `0` | >0: bell and desktop notification after commands that long (seconds) |
 | `B4H_SHELL_INTEGRATION_EXCEPT` | | SSH client addresses whose terminal prints those codes as text |
 | `B4H_SSH_SEND_FILES` | `()` | extra files `b4h ssh` copies (never overwrites the host's) |
+| `B4H_GIT_BASE` | `https://github.com` | where `b4h install USER/REPO` fetches from (another git host, or a mirror) |
 | `B4H_AUTO_UPDATE` | `ask` (template) | offer an update every `B4H_AUTO_UPDATE_DAYS` (28) |
 | `B4H_START_TMUX` / `B4H_DIRENV` | `no` | |
 | `B4H_FIX_LOCALE` | `yes` | with no UTF-8 locale in effect (none set, `C`, or one not installed), set `LC_ALL` to `C.UTF-8` (else `en_US.UTF-8`, else another UTF-8 locale), as zsh4humans does; `no`: leave it |

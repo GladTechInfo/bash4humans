@@ -229,6 +229,34 @@ for e in ble readline; do
     check "global history: Ctrl+Up has all $e" "$ok" "$last"
   fi
 
+  if want repos && [[ $e == readline ]]; then
+    # b4h install/load/source/update/uninstall against a local git
+    # repository standing in for GitHub (B4H_GIT_BASE=file://...).
+    g=$T/git/demo/hello
+    git init -q -b main "$g"
+    mkdir -p "$g/bin" "$g/lib"
+    printf 'hello_b4h() { echo hello-v1; }\n' >"$g/hello.plugin.bash"
+    printf '#!/bin/sh\necho greet-ok\n' >"$g/bin/greet"; chmod +x "$g/bin/greet"
+    printf 'extra_b4h=sourced-ok\n' >"$g/lib/extra.bash"
+    git -C "$g" add -A && git -C "$g" -c user.name=t -c user.email=t@t commit -qm v1
+    repo_run() { env -i HOME="$HOME" PATH="$PATH" TERM=xterm B4H_GIT_BASE="file://$T/git" \
+                   bash --rcfile "$d/rc" -i -c "$1" 2>&1 </dev/null; }
+    r=$(repo_run 'b4h install demo/hello >/dev/null && b4h load demo/hello && hello_b4h && greet && b4h source demo/hello/lib/extra.bash && echo "$extra_b4h"')
+    ok=1; [[ $r == *hello-v1*greet-ok*sourced-ok* ]] && ok=0
+    check "b4h install, load, bin/, source $e" "$ok" "$r"
+    printf 'hello_b4h() { echo hello-v2; }\n' >"$g/hello.plugin.bash"
+    git -C "$g" -c user.name=t -c user.email=t@t commit -qam v2
+    r=$(repo_run 'b4h install demo/hello; b4h update 2>/dev/null | grep demo/hello; b4h load demo/hello && hello_b4h')
+    ok=1; [[ $r == *'demo/hello '*' -> '*hello-v2* ]] && ok=0
+    check "b4h update follows the branch $e" "$ok" "$r"
+    r=$(repo_run 'b4h install demo/missing; echo "rc=$?"; b4h install demo/missing; echo "rc=$?"')
+    ok=1; [[ $r == *'could not be downloaded'*'rc=1'*'rc=1' && $(grep -c 'could not' <<<"$r") == 1 ]] && ok=0
+    check "b4h install: a failed download is remembered $e" "$ok" "$r"
+    r=$(repo_run 'b4h uninstall demo/hello >/dev/null; b4h load demo/hello')
+    ok=1; [[ $r == *'not installed'* && ! -d $d/home/repos/demo/hello ]] && ok=0
+    check "b4h uninstall $e" "$ok" "$r"
+  fi
+
   if want locale; then
     # The shell started with a clean environment (no terminal needed: the fix
     # runs before the line editor); "é" is one character only in UTF-8.
