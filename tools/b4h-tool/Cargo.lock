@@ -13,7 +13,7 @@ dependencies = [
 
 [[package]]
 name = "b4h-tool"
-version = "0.3.4"
+version = "0.3.5"
 dependencies = [
  "regex",
 ]
