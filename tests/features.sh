@@ -61,7 +61,8 @@ mk_env() {    # $1: ble | readline
 }
 
 # run_screen NAME EDITOR STEP... : run the keys (each STEP one string;
-# "@N" waits N tenths of a second), keep the screen as text.
+# "@N" waits N tenths of a second; "!CMD" runs CMD beside the shell, as
+# another terminal would), keep the screen as text.
 run_screen() {
   local name=$1 e=$2; shift 2
   local d=$T/$e out=$T/out/$name-$e steps k
@@ -70,6 +71,8 @@ run_screen() {
   for k in "$@"; do
     if [[ $k == @* ]]; then
       steps+=', {"wait": '"$(( ${k#@} / 10 )).$(( ${k#@} % 10 ))"'}'
+    elif [[ $k == !* ]]; then
+      steps+=', {"sh": '"$(jq -Rn --arg c "${k#!}" '$c')"'}, {"wait": 1}'
     elif [[ $k == '\x00' ]]; then
       # Ctrl+Space: a NUL byte, which a bash variable cannot hold
       steps+=', {"keys": "\u0000"}, {"wait": 0.6}'
@@ -206,6 +209,24 @@ for e in ble readline; do
     run_screen clipboard-v "$e" 'echo pasted-7 | c\r' 'v | tr a-z A-Z\r'
     grep -qx 'pasted-7' <<<"$SCREEN" && grep -qx 'PASTED-7' <<<"$SCREEN"
     check "c, v $e" $? 'copy/paste round trip'
+  fi
+
+  if want local-history && [[ $e == ble ]]; then
+    # One entry at start; "another shell" adds one while this one runs; this
+    # shell runs its own. Up: own, then the start-up one (the other shell's
+    # passed over). Ctrl+Up: own, then the other shell's.
+    printf '#1700000000\necho start-9\n' >"$d/hist"
+    run_screen local-history "$e" '@10' "!printf '#1700000100\\necho foreign-9\\n' >> $d/hist" \
+      'echo own-9\r' '@10' '\e[A' '\e[A'
+    last=$(grep '❯' <<<"$SCREEN" | tail -1)
+    ok=1; [[ $last == *'echo start-9'* ]] && ok=0
+    check "local history: Up skips other shells $e" "$ok" "$last"
+    printf '#1700000000\necho start-9\n' >"$d/hist"
+    run_screen global-history "$e" '@10' "!printf '#1700000100\\necho foreign-9\\n' >> $d/hist" \
+      'echo own-9\r' '@10' '\e[1;5A' '\e[1;5A'
+    last=$(grep '❯' <<<"$SCREEN" | tail -1)
+    ok=1; [[ $last == *'echo foreign-9'* ]] && ok=0
+    check "global history: Ctrl+Up has all $e" "$ok" "$last"
   fi
 
   if want locale; then

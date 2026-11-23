@@ -50,7 +50,7 @@ Your old startup files are copied to `~/bash-backup/<date>/`, and the old
 | **Highlighting** | commands, options, strings, paths; unknown commands in red |
 | **Completion** | TAB menu with a description per entry; option names read from man pages; `**`+TAB fuzzy |
 | **Fuzzy finder** | **Ctrl+R** history, **Ctrl+T** files, **Alt+C** cd (fzf) |
-| **History** | unlimited, timestamped, shared live between open shells; **Up/Down** entries containing what is typed, **Ctrl+Up/Down** entries starting with it |
+| **History** | unlimited, timestamped, shared live between open shells; **Up/Down** entries containing what is typed, from this shell's history (what other shells add meanwhile is left out, as in zsh4humans), **Ctrl+Up/Down** entries starting with it, from all shells |
 | **Prompt** | Powerlevel10k: lean, classic, rainbow, pure; all its segments and settings, instant and transient prompt - see below |
 | **Directories** | **Alt+Left/Right** back/forward, **Alt+Up** parent, **Alt+Down** pick a subdirectory; **Alt+R** (or `cdh`, `cd -`+TAB) any directory you have been to, in any shell; `dirh`, `prevd`, `nextd`; type a directory name to enter it |
 | **Editing** | **Ctrl+Backspace** delete word, **Ctrl+Alt+Backspace** shell word, **Ctrl+Shift+Left/Right/Delete** move or delete by shell word, **Ctrl+/** or **Shift+Tab** undo, **Alt+/** redo, **Alt+J** clear the line, **Alt+O** put it aside (Up brings it back), **Ctrl+Space** expand the word (alias, `~`, `$VAR`, glob), **Alt+S** toggle sudo, **Alt+H** manual page |
@@ -197,6 +197,7 @@ default is in [`lib/settings.bash`](lib/settings.bash).
 | `B4H_SUGGEST_ACCEPT` | `all` | `word`: Right takes one word |
 | `B4H_SHELL_INTEGRATION` | `yes` | OSC 7 / OSC 133 for the terminal (p10k's `TERM_SHELL_INTEGRATION`, switched on) |
 | `B4H_TITLE` | `yes` | set the window title: `B4H_TITLE_IDLE` at the prompt (`'\w'`), `B4H_TITLE_RUNNING` while a command runs (`'$B4H_COMMAND'`); over SSH both start with `\u@\h: ` |
+| `B4H_HISTORY_LOCAL` | `yes` | Up/Down leave out what other shells add while this one runs (Ctrl+Up/Down always search all); `no`: one shared list. Under ble.sh; readline has one list |
 | `B4H_DIR_HISTORY_SIZE` | `10000` | directories kept for Alt+R / `cdh` (0: none) |
 | `B4H_CLIPBOARD_COMMANDS` | `yes` | `no`: no `x`, `c`, `v` |
 | `B4H_NOTIFY_MIN` | `0` | >0: bell and desktop notification after commands that long (seconds) |

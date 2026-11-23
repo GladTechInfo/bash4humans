@@ -3,8 +3,9 @@
 #
 #    Right / Ctrl+F         accept the grey suggestion (ble.sh)
 #    Alt+M                  accept the whole suggestion (ble.sh)
-#    Up / Down              history entries containing what is typed
-#    Ctrl+Up / Ctrl+Down    history entries starting with what is typed
+#    Up / Down              history entries containing what is typed: this shell's
+#                           (ble.sh: not what other shells add meanwhile)
+#    Ctrl+Up / Ctrl+Down    history entries starting with what is typed: all shells'
 #    Ctrl+R                 fuzzy history (fzf)       Ctrl+T  files    Alt+C  cd
 #    Ctrl+Backspace, Ctrl+H delete a word             Ctrl+Alt+Backspace  a shell word
 #    Ctrl+Left / Right      word left / right         Ctrl+Delete  delete word right
@@ -133,6 +134,57 @@ if (( _b4h_ble )); then
     ble/widget/end-of-text
     ble/widget/kill-backward-text
   }
+  # ---- local and global history (zsh4humans: zle set-local-history) ----
+  # Up/Down search the history this shell started with and the commands
+  # run in it; what other shells add meanwhile (B4H_HISTORY_SHARE) is left
+  # out. Ctrl+Up/Down search all of it. ble.sh brings other shells' lines in
+  # with its own `history -n` (ble/builtin/history/option:n): the positions
+  # each import adds are remembered, and a local search steps over them.
+  _b4h_hist_foreign=()      # position in ble.sh's history -> 1: came from another shell
+  _b4h_hist_local=0         # 1 while a search started by Up/Down runs
+  _b4h_hist_import() {      # around option:n
+    # (ble.sh loads the history on first use; that first load is this
+    # shell's own start-up history, so nothing is marked then)
+    local loaded=${_ble_history_count-} before after i
+    [[ -n $loaded ]] && ble/history/get-count -v before
+    ble/function#advice/do
+    [[ -n $loaded ]] || return 0
+    ble/history/get-count -v after
+    if (( after < before )); then
+      _b4h_hist_foreign=()  # the history was read again from the start: positions changed
+    else
+      for (( i = before; i < after; i++ )); do _b4h_hist_foreign[i]=1; done
+    fi
+  }
+  # Around ble.sh's history searches: `index` (the caller's variable) holds
+  # the match. In a local search a match from another shell is passed over
+  # and the search goes on from the next entry in the same direction.
+  _b4h_hist_skip_backward() {
+    while :; do
+      ble/function#advice/do
+      (( ADVICE_EXIT == 0 && _b4h_hist_local && ${_b4h_hist_foreign[index]-0} )) || return 0
+      (( --index >= 0 )) || { ADVICE_EXIT=1; return 0; }
+    done
+  }
+  _b4h_hist_skip_forward() {
+    local count
+    while :; do
+      ble/function#advice/do
+      (( ADVICE_EXIT == 0 && _b4h_hist_local && ${_b4h_hist_foreign[index]-0} )) || return 0
+      ble/history/get-count -v count
+      (( ++index < count )) || { ADVICE_EXIT=1; return 0; }
+    done
+  }
+  ble/function#advice around ble/builtin/history/option:n _b4h_hist_import
+  ble/function#advice around ble/history/isearch-backward-blockwise _b4h_hist_skip_backward
+  ble/function#advice around ble/history/isearch-forward _b4h_hist_skip_forward
+  # The widgets: they say which kind of search runs, then start ble.sh's.
+  _b4h_hist_set_local() { _b4h_hist_local=0; [[ $B4H_HISTORY_LOCAL == yes ]] && _b4h_hist_local=1; }
+  function ble/widget/b4h-up-local     { _b4h_hist_set_local; ble/widget/history-substring-search-backward; }
+  function ble/widget/b4h-down-local   { _b4h_hist_set_local; ble/widget/history-substring-search-forward; }
+  function ble/widget/b4h-up-global    { _b4h_hist_local=0; ble/widget/history-search-backward; }
+  function ble/widget/b4h-down-global  { _b4h_hist_local=0; ble/widget/history-search-forward; }
+
   # Alt+O: into ble.sh's own history list (ble.sh keeps it, not bash)
   _b4h_key_stash_ble() {
     [[ -n $READLINE_LINE ]] || return 0
@@ -156,10 +208,10 @@ if (( _b4h_ble )); then
     ble-bind -f C-S-left   backward-sword
     ble-bind -f C-S-right  forward-sword
     ble-bind -f C-S-delete kill-forward-sword
-    ble-bind -f up       history-substring-search-backward
-    ble-bind -f down     history-substring-search-forward
-    ble-bind -f C-up     history-search-backward
-    ble-bind -f C-down   history-search-forward
+    ble-bind -f up       b4h-up-local
+    ble-bind -f down     b4h-down-local
+    ble-bind -f C-up     b4h-up-global
+    ble-bind -f C-down   b4h-down-global
     ble-bind -f M-j      b4h-kill-buffer
     ble-bind -x M-o      _b4h_key_stash_ble
     ble-bind -x C-@      _b4h_key_expand

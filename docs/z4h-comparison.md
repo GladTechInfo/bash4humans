@@ -47,7 +47,7 @@ b4h; **n/a** = specific to zsh/macOS/iTerm2, nothing to port; **b4h+** = b4h has
 
 | Key | z4h | b4h | Status |
 |---|---|---|---|
-| Up/Down, Ctrl+P/N | history containing what is typed (this session first: "local") | substring search (shared history); Enter runs the line found | partial: no local/global split |
+| Up/Down, Ctrl+P/N | history containing what is typed (this session first: "local") | substring search; local as z4h (other shells' new entries passed over: `B4H_HISTORY_LOCAL`, ble.sh); Enter runs the line found | same (ble.sh); readline: one list |
 | Ctrl+Up/Down | global prefix history (all sessions) | prefix search (shared history) | same |
 | Home/End, Ctrl+Home/End, Alt+Home/End | line / buffer start-end | ble.sh defaults | same |
 | Ctrl+Left/Right, Alt+B/F | word left/right | same | same |
@@ -83,7 +83,7 @@ b4h; **n/a** = specific to zsh/macOS/iTerm2, nothing to port; **b4h+** = b4h has
 | z4h | b4h | Status |
 |---|---|---|
 | unlimited, shared between shells | same (`HISTSIZE=-1`, history_share) | same |
-| local (session) vs global history widgets | one shared list | missing |
+| local (session) vs global history widgets | Up/Down local, Ctrl+Up/Down global (ble.sh; `lib/keys.bash`) | same (ble.sh) |
 | `preserve-trailing-whitespace` | — | missing (minor) |
 | — | timestamps, `histdel`, `b4h private` (no history) | b4h+ |
 
@@ -127,7 +127,7 @@ Alt+M, Alt+O, Alt+J, Ctrl+Space, Ctrl+Shift+Left/Right/Del, Ctrl+Up/Down; the
 title while a command runs; `x` / `c` / `v` (checked by `tests/features.sh`).
 What remains:
 
-1. Local vs global history (Up/Down this session's commands first; needs a
+1. ~~Local vs global history~~ Done 2026-11-23 (ble.sh: Up/Down local, Ctrl+Up/Down global). Was: (Up/Down this session's commands first; needs a
    per-session list in bash).
 2. ~~Locale fix-up (UTF-8 when none is set).~~ Done 2026-11-23 (`lib/locale.bash`).
 3. SSH: automatic per-host teleportation, history retrieval, terminfo.

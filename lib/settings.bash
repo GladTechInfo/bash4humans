@@ -20,6 +20,7 @@
 
 # ---------------------------------------------------------------- history ---
 : "${B4H_HISTORY_SHARE:=yes}"         # commands typed in one shell appear in the others
+: "${B4H_HISTORY_LOCAL:=yes}"         # yes: Up/Down search this shell's history, not what other shells add meanwhile (Ctrl+Up/Down: all; ble.sh only) | no
 : "${B4H_DIR_HISTORY_SIZE:=10000}"    # directories kept for Alt+R / cdh / cd -<Tab>, across shells (0: none)
 
 # -------------------------------------------------------------- clipboard ---
