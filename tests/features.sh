@@ -61,6 +61,7 @@ mk_env() {    # $1: ble | readline
 }
 
 # run_screen NAME EDITOR STEP... : run the keys (each STEP one string;
+# RC=FILE: another rc file;
 # "@N" waits N tenths of a second; "!CMD" runs CMD beside the shell, as
 # another terminal would), keep the screen as text.
 run_screen() {
@@ -82,7 +83,7 @@ run_screen() {
   done
   steps+=', {"wait": 1}, {"snap": "screen"}, {"keys": "\u0003exit\r"}, {"wait": 1}]'
   printf '{"cmd": ["bash", "--rcfile", "%s", "-i"], "rows": 30, "cols": 100, "env": {"TERM": "xterm-256color", "LANG": "C.UTF-8", "COLORTERM": "", "HOME": "%s"}, "steps": %s}\n' \
-    "$d/rc" "$HOME" "$steps" >"$out.json"
+    "${RC:-$d/rc}" "$HOME" "$steps" >"$out.json"
   rm -rf "$out"
   tui-capture "$out.json" "$out" >/dev/null 2>&1
   jq -r '.grid[] | map(.[0]) | join("") | sub(" +$"; "")' "$out/screen.json" >"$out.txt" 2>/dev/null
@@ -255,6 +256,41 @@ for e in ble readline; do
     r=$(repo_run 'b4h uninstall demo/hello >/dev/null; b4h load demo/hello')
     ok=1; [[ $r == *'not installed'* && ! -d $d/home/repos/demo/hello ]] && ok=0
     check "b4h uninstall $e" "$ok" "$r"
+  fi
+
+  if want ssh && [[ $e == ble ]]; then
+    # A stand-in for ssh runs the "remote" commands here with HOME=$T/remote
+    # (CI has no ssh server): plain `ssh other` passes through; `ssh -p 2222
+    # box.lab` (B4H_SSH_HOSTS) teleports, keeps the session's history in the
+    # host's bash4humans-ssh.history and brings it back afterwards.
+    mkdir -p "$T/fakebin" "$T/remote"
+    cat >"$T/fakebin/ssh" <<'FAKE'
+#!/bin/bash
+# stand-in for ssh: options skipped, then HOST, then the remote command
+while [[ $1 == -* ]]; do
+  case $1 in -[BbcDEeFIiJLlmOopQRSWw]) shift ;; esac
+  shift
+done
+host=$1; shift
+if (( ! $# )); then echo "PLAIN-SSH $host"; exit 0; fi
+HOME=$FAKE_REMOTE exec sh -c "$*"
+FAKE
+    chmod +x "$T/fakebin/ssh"
+    # As the real ~/.bashrc: bash4humans from $B4H_HOME/b4h, so the host runs
+    # the uploaded copy, not this checkout
+    ln -sfn "$ROOT" "$d/home/b4h"
+    sed -e "s|^B4H_HOME=.*|B4H_HOME=\${B4H_HOME:-$d/home}|" -e "s|^HISTFILE=.*|HISTFILE=\${HISTFILE:-$d/hist}|" \
+        -e "s|^\. $ROOT/b4h.bash\$|. \"\\\$B4H_HOME/b4h/b4h.bash\"|" "$d/rc" >"$d/rc-ssh"
+    sed -i "1i B4H_SSH_HOSTS=('*.lab'); B4H_SSH_RETRIEVE_HISTORY=$d/remote-hist; B4H_RCFILE=$d/rc-ssh; PATH=$T/fakebin:\$PATH; export FAKE_REMOTE=$T/remote" "$d/rc-ssh"
+    rm -f "$d/remote-hist"
+    RC=$d/rc-ssh run_screen ssh "$e" 'ssh other\r' '@10' 'ssh -p 2222 box.lab\r' '@80' \
+      'echo "remote=$B4H_HOME hist=$HISTFILE"\r' '@10' 'echo marker-77\r' '@10' 'exit\r' '@30'
+    has 'PLAIN-SSH other'; check "ssh: other hosts unchanged $e" $? 'no plain ssh'
+    # (the line is longer than the screen: compare with the wrapped rows joined)
+    ok=1; [[ ${SCREEN//$'\n'/} == *"remote=$T/remote/.cache/bash4humans-ssh hist=$T/remote/.cache/bash4humans-ssh.history"* ]] && ok=0
+    check "ssh: a B4H_SSH_HOSTS host teleports $e" "$ok" 'no bash4humans on the host'
+    ok=1; grep -qx 'echo marker-77' "$d/remote-hist" 2>/dev/null && ! grep -q marker-77 "$d/hist" && ok=0
+    check "ssh: the session's history comes back $e" "$ok" "$(cat "$d/remote-hist" 2>&1)"
   fi
 
   if want locale; then

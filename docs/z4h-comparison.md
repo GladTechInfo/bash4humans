@@ -91,12 +91,12 @@ b4h; **n/a** = specific to zsh/macOS/iTerm2, nothing to port; **b4h+** = b4h has
 
 | z4h | b4h | Status |
 |---|---|---|
-| automatic on plain `ssh HOST`, per host (`:z4h:ssh:HOST enable`) | explicit `b4h ssh HOST` | partial |
+| automatic on plain `ssh HOST`, per host (`:z4h:ssh:HOST enable`) | `B4H_SSH_HOSTS` patterns; `b4h ssh HOST` for any host | same |
 | works without zsh on the host (it brings zsh) | needs bash 5 on the host | partial |
 | `send-extra-files` | `B4H_SSH_SEND_FILES` (+ rc file, prompt config) | same |
-| `retrieve-history` / `retrieve-extra-files` (history back from the host, shared between hosts) | — | missing |
+| `retrieve-history` / `retrieve-extra-files` (history back from the host, shared between hosts) | the session's history in the host's `~/.cache/bash4humans-ssh.history`; `B4H_SSH_RETRIEVE_HISTORY=FILE` appends each session's lines here; no extra files | partial |
 | `configure` hook, `ssh-command`, `term` per host | — | missing |
-| terminfo sent along | — | missing |
+| terminfo sent along | when the host lacks `$TERM`: compiled there into `~/.cache/bash4humans-ssh.terminfo` (TERMINFO), else TERM=xterm-256color | same |
 
 ## 8. Terminal integration and environment
 
@@ -130,7 +130,7 @@ What remains:
 1. ~~Local vs global history~~ Done 2026-11-23 (ble.sh: Up/Down local, Ctrl+Up/Down global). Was: (Up/Down this session's commands first; needs a
    per-session list in bash).
 2. ~~Locale fix-up (UTF-8 when none is set).~~ Done 2026-11-23 (`lib/locale.bash`).
-3. SSH: automatic per-host teleportation, history retrieval, terminfo.
+3. ~~SSH: automatic per-host teleportation, history retrieval, terminfo.~~ Done 2026-11-23 (`B4H_SSH_HOSTS`, `B4H_SSH_RETRIEVE_HISTORY`, terminfo); still missing: retrieve-extra-files, a configure hook, `term` per host.
 4. Tab: fzf completion with multi-select / recurse-dirs as z4h's (B4H_TAB=fzf is simpler).
 5. ~~Plugins from any GitHub repository (`b4h install user/repo`).~~ Done 2026-11-23 (`lib/repos.bash`).
 6. prompt-at-bottom and soft/hard clear (z4h needs its integrated tmux for these).

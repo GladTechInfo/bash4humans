@@ -60,7 +60,7 @@ Your old startup files are copied to `~/bash-backup/<date>/`, and the old
 | **zsh extras** | `zmv` bulk rename, `alias_suffix txt=nano` (zsh's `alias -s`), `abbr --position anywhere` (zsh's `alias -g`) |
 | **fish extras** | `abbr`, `funced`/`funcsave`, `add_path`, `histdel`, `b4h private`, Alt+S, Alt+H |
 | **Plugins** | `extract`, `colored-man-pages`, `zoxide`, `ssh-agent`, `git-aliases`, `cht`, and your own |
-| **SSH** | `b4h ssh HOST` brings all of this to HOST for that session, without touching HOST's files |
+| **SSH** | `b4h ssh HOST` brings all of this to HOST for that session, without touching HOST's files; with `B4H_SSH_HOSTS` a plain `ssh HOST` does it. The session's history stays in bash4humans' own file there (`B4H_SSH_RETRIEVE_HISTORY` brings it back), and a terminal HOST does not know gets its terminfo sent along |
 
 Typing: an unknown command stays red until it is complete, strings and
 variables have their own colours, an existing path is underlined, TAB
@@ -221,6 +221,8 @@ default is in [`lib/settings.bash`](lib/settings.bash).
 | `B4H_NOTIFY_MIN` | `0` | >0: bell and desktop notification after commands that long (seconds) |
 | `B4H_SHELL_INTEGRATION_EXCEPT` | | SSH client addresses whose terminal prints those codes as text |
 | `B4H_SSH_SEND_FILES` | `()` | extra files `b4h ssh` copies (never overwrites the host's) |
+| `B4H_SSH_HOSTS` | `()` | hosts (patterns: `build-server '*.lab'`) where a plain `ssh HOST` is `b4h ssh HOST`; only interactive logins (no remote command, no `-N`/`-T`/`-f`/`-W`) |
+| `B4H_SSH_RETRIEVE_HISTORY` | | a file: after each `b4h ssh` session, its new history lines are appended to it (e.g. `~/.bash_history.remote`) |
 | `B4H_GIT_BASE` | `https://github.com` | where `b4h install USER/REPO` fetches from (another git host, or a mirror) |
 | `B4H_AUTO_UPDATE` | `ask` (template) | offer an update every `B4H_AUTO_UPDATE_DAYS` (28) |
 | `B4H_START_TMUX` / `B4H_DIRENV` | `no` | |
