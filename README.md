@@ -34,6 +34,9 @@ ble.sh's nightly). **No zsh.** Tested on Arch Linux (bash 5.3), Debian 13
 (bash 5.2, a bare container with bash only) and Debian testing. A Nerd Font in
 the terminal gives the full prompt; the wizard checks what your font can show.
 
+New installations open an inline fzf picker on Tab. Set `B4H_TAB=menu` in
+`~/.bashrc` before bash4humans loads to use the ble.sh menu with descriptions.
+
 For scripts and provisioning, `B4H_UNATTENDED=1` answers every question with
 the recommended choice (standard keys, ble.sh, no tmux, `~/.bashrc` replaced)
 and starts no shell at the end.
@@ -48,7 +51,7 @@ Your old startup files are copied to `~/bash-backup/<date>/`, and the old
 |---|---|
 | **Suggestions** | grey text from history as you type; **Right**, **Ctrl+F** or **Alt+M** takes it |
 | **Highlighting** | commands, options, strings, paths; unknown commands in red |
-| **Completion** | TAB menu with a description per entry; option names read from man pages; `**`+TAB fuzzy; with `B4H_TAB=fzf`, TAB opens fzf as in zsh4humans: **Ctrl+Space** marks entries, **Ctrl+A** all, Enter inserts them |
+| **Completion** | TAB opens fzf below the command on new installs: **Ctrl+Space** marks entries, **Ctrl+A** all, Enter inserts them. `B4H_TAB=menu` selects the descriptive ble.sh menu. Option names come from man pages; `**`+TAB is also fuzzy |
 | **Fuzzy finder** | **Ctrl+R** history, **Ctrl+T** files, **Alt+C** cd (fzf) |
 | **History** | unlimited, timestamped, shared live between open shells; **Up/Down** entries containing what is typed, from this shell's history (what other shells add meanwhile is left out, as in zsh4humans), **Ctrl+Up/Down** entries starting with it, from all shells |
 | **Prompt** | Powerlevel10k: lean, classic, rainbow, pure; all its segments and settings, instant and transient prompt - see below |
@@ -211,7 +214,7 @@ default is in [`lib/settings.bash`](lib/settings.bash).
 | `B4H_LINE_EDITOR` | `ble` | `readline` for plain bash editing (no suggestions/highlighting, ~60 ms start instead of ~300 ms) |
 | `B4H_GREETING` | | a command run at start, e.g. `fastfetch` |
 | `B4H_PLUGINS` | `()` | plugins to load |
-| `B4H_TAB` | `menu` | `fzf`: TAB opens fzf (as zsh4humans): Ctrl+Space marks, Ctrl+A marks all, Enter inserts the marked entries (or the one under the cursor); Tab / Shift+Tab move |
+| `B4H_TAB` | `fzf` (new installs), `menu` if unset | `fzf`: inline picker below the command. Ctrl+Space marks, Ctrl+A marks all, Enter inserts the marked entries (or the one under the cursor); Tab / Shift+Tab move. `menu`: ble.sh menu with descriptions |
 | `B4H_TAB_RECURSE` | `no` | `yes` (with `B4H_TAB=fzf`): directories offered also list the paths under them (depth `B4H_TAB_RECURSE_DEPTH`=4, at most `B4H_TAB_RECURSE_MAX`=2000; `.git` skipped), as zsh4humans' `recurse-dirs` |
 | `B4H_SUGGEST_ACCEPT` | `all` | `word`: Right takes one word |
 | `B4H_SHELL_INTEGRATION` | `yes` | OSC 7 / OSC 133 for the terminal (p10k's `TERM_SHELL_INTEGRATION`, switched on) |

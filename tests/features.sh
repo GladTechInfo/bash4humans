@@ -311,11 +311,24 @@ FAKE
     # B4H_TAB=fzf: Ctrl+A marks every file, Enter inserts them all, quoted;
     # a single Enter inserts the entry under the cursor (ble.sh's own way).
     { echo 'B4H_TAB=fzf'; cat "$d/rc"; } >"$d/rc-fzf"
-    RC=$d/rc-fzf run_screen fzf-tab-all "$e" 'cd files\r' 'ls ' '\t' '@20' '\x01' '\r' '@10'
+    RC=$d/rc-fzf CPR=1 run_screen fzf-tab-inline "$e" 'cd files\r' 'seq 22\r' 'ls ' '\t' '@20'
+    awk '/❯.*ls$/ { if ((getline > 0) && /^────/ && (getline > 0) && /^>( |$)/) found=1 }
+         END { exit !found }' <<<"$SCREEN"
+    check "fzf Tab: picker stays below a command near the bottom $e" "$?" "$SCREEN"
+    printf -v padding '%110s' ''
+    RC=$d/rc-fzf CPR=1 run_screen fzf-tab-wrapped "$e" 'cd files\r' "ls a ${padding// /x}-wrapped-tail" \
+      '\x01\x06\x06\x06\x06' '\t' '@20'
+    awk '/-wrapped-tail$/ { if ((getline > 0) && /^────/) found=1 }
+         END { exit !found }' <<<"$SCREEN"
+    check "fzf Tab: picker stays below the end of a wrapped command $e" "$?" "$SCREEN"
+    RC=$d/rc-fzf CPR=1 run_screen fzf-tab-cancel "$e" 'cd files\r' 'ls a' '\t' '@20' '\e' '@5' '2.txt\r'
+    grep -q '^a2\.txt$' <<<"$SCREEN"
+    check "fzf Tab: Escape leaves the command editable $e" "$?" "$SCREEN"
+    RC=$d/rc-fzf CPR=1 run_screen fzf-tab-all "$e" 'cd files\r' 'ls ' '\t' '@20' '\x01' '\r' '@10'
     last=$(grep '❯' <<<"$SCREEN" | tail -1)
     ok=1; [[ $last == *'ls a1.txt a2.txt b\ 3.txt'* ]] && ok=0
     check "fzf Tab: Ctrl+A inserts every pick $e" "$ok" "$last"
-    RC=$d/rc-fzf run_screen fzf-tab-one "$e" 'cd files\r' 'ls ' '\t' '@20' '\r' '@10'
+    RC=$d/rc-fzf CPR=1 run_screen fzf-tab-one "$e" 'cd files\r' 'ls ' '\t' '@20' '\r' '@10'
     last=$(grep '❯' <<<"$SCREEN" | tail -1)
     ok=1; [[ $last =~ ls\ (a1|a2)\.txt\ *$|ls\ b\\\ 3\.txt\ *$ ]] && ok=0
     check "fzf Tab: Enter inserts one $e" "$ok" "$last"
@@ -325,7 +338,7 @@ FAKE
     # B4H_TAB_RECURSE=yes: files under the directories offered are listed
     # too; a pick from there is inserted with its path, quoted.
     { echo 'B4H_TAB=fzf B4H_TAB_RECURSE=yes'; cat "$d/rc"; } >"$d/rc-recurse"
-    RC=$d/rc-recurse run_screen fzf-tab-recurse "$e" 'ls ' '\t' '@20' 'b 3' '@10' '\r' '@10'
+    RC=$d/rc-recurse CPR=1 run_screen fzf-tab-recurse "$e" 'ls ' '\t' '@20' 'b 3' '@10' '\r' '@10'
     last=$(grep '❯' <<<"$SCREEN" | tail -1)
     ok=1; [[ $last == *'ls files/b\ 3.txt'* ]] && ok=0
     check "fzf Tab: B4H_TAB_RECURSE lists files under directories $e" "$ok" "$last"

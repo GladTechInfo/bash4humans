@@ -68,6 +68,7 @@ _b4h_fzf_tab_setup() {
   function ble/contrib/integration:fzf-menu/SELECTOR {
     local -a opts=(--ansi --query "$common_prefix" -d "$sep" --with-nth=2.. --nth=1
                    --multi --cycle
+                   --layout=reverse --border=horizontal
                    --bind 'ctrl-space:toggle+down,ctrl-a:toggle-all,tab:down,btab:up,alt-j:clear-query,ctrl-u:clear-query')
     local ret; ble/util/c2w 0x2500
     ((ret == 1)) || opts+=(--no-unicode)
@@ -98,6 +99,13 @@ _b4h_fzf_tab_setup() {
                  head -n "$B4H_TAB_RECURSE_MAX")
       done
     fi
+    # Size the picker ourselves so older fzf versions can open it inline too.
+    local rows=${LINES:-24} height=$(( $# + ${#extra[@]} + 4 )) limit
+    limit=$(( rows * 40 / 100 ))
+    (( limit >= 6 )) || limit=6
+    (( height <= limit )) || height=$limit
+    (( height < rows )) || height=$(( rows > 1 ? rows - 1 : 1 ))
+    opts+=("--height=$height")
     local -a picked
     mapfile -t picked < <({ builtin eval -- "printf '%s\n' \"\$@\"$_ble_contrib_fzf_menu_filter"
                              (( ${#extra[@]} )) && printf '%s\n' "${extra[@]}"; } | fzf "${opts[@]}" | cut -d "$sep" -f 1)
@@ -119,6 +127,16 @@ _b4h_fzf_tab_setup() {
       done >"$_b4h_fzf_tab_picks"
     fi
   }
+  _b4h_fzf_tab_move_below_wrapped_input() {
+    [[ ${bleopt_integration_fzf_menu_enabled-} ]] || return 0
+    (( cand_count > 1 && _ble_textarea_gendy > _ble_textarea_cur[1] )) || return 0
+    # Move the terminal cursor to the last row without changing the edit point.
+    local -a DRAW_BUFF=()
+    ble/canvas/panel#goto.draw "$_ble_textarea_panel" "$_ble_textarea_gendx" "$_ble_textarea_gendy"
+    ble/canvas/bflush.draw
+  }
+  ble/function#advice before ble/contrib/integration:fzf-menu/.select-and-insert _b4h_fzf_tab_move_below_wrapped_input
+
   # After ble.sh's step: several picks replace the word being completed,
   # each as ble.sh quoted it, with a space after the last.
   _b4h_fzf_tab_insert_picks() {
