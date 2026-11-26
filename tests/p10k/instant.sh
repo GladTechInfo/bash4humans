@@ -8,6 +8,13 @@
 # real prompt is compared too.
 T=${B4H_TEST_DIR:-/tmp/b4h-test}/instant; mkdir -p "$T"
 root=$(cd "${BASH_SOURCE[0]%/*}/../.." && pwd)
+# The prompt caches are disposable, but gitstatusd must be available offline.
+export GITSTATUS_CACHE_DIR=${GITSTATUS_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/gitstatus}
+export GITSTATUS_AUTO_INSTALL=0
+if ! "$HOME/src/powerlevel10k/gitstatus/install" -n -- sh -c 'test -x "$1"' sh; then
+  echo "SETUP: cannot resolve an executable gitstatusd offline (cache: $GITSTATUS_CACHE_DIR)" >&2
+  exit 2
+fi
 "$root/tests/p10k/make-git-fixtures.sh" "$T/git" >/dev/null
 
 # NAME|TEMPLATE|DIRECTORY|EXTRA SETTINGS (both shells, separated by ;)
@@ -24,9 +31,13 @@ cases=(
   "lean-1line|lean|/tmp|POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(dir prompt_char);POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(status context time)"
 )
 
-cells() {
-  jq -c '.grid | to_entries[] | .key as $r | .value | to_entries[] | [$r, .key, .value[0], .value[1], .value[2], .value[3]]' "$1" |
-    sed 's/^\(\[[0-9]*,[0-9]*,"\)[0-9]"/\1#"/'
+normalise_snapshot() {
+  jq -ce '
+    if (.cursor | type) != "array" or (.cursor_visible | type) != "boolean" then
+      error("capture lacks cursor information")
+    else
+      {cursor, cursor_visible, grid: (.grid | map(map(.[0:4] | .[0] |= sub("^[0-9]$"; "#"))))}
+    end' "$1"
 }
 pass=0 fail=0
 for c in "${cases[@]}"; do
@@ -55,12 +66,39 @@ for c in "${cases[@]}"; do
       "$cmd" "$env" >"$d/$sh.1.json"
     printf '{"cmd": %s, "rows": 10, "cols": 100, "env": %s, "steps": [{"wait": 1}, {"snap": "instant"}, {"wait": 3}, {"snap": "real"}, {"keys": "exit\\r"}, {"wait": 1}]}\n' \
       "$cmd" "$env" >"$d/$sh.2.json"
-    (cd "$dir" && tui-capture "$d/$sh.1.json" "$d/$sh.1" >/dev/null 2>&1)
-    (cd "$dir" && tui-capture "$d/$sh.2.json" "$d/$sh.2" >/dev/null 2>&1)
+    if ! (cd "$dir" && tui-capture "$d/$sh.1.json" "$d/$sh.1" >"$d/$sh.1.log" 2>&1); then
+      bad="$sh warm-up capture failed (see $d/$sh.1.log)"
+      break
+    fi
+    cache="$d/cache.$sh"
+    if [[ $sh == zsh ]]; then
+      prompt_cache="$cache/p10k-$(id -un)/prompt-${#dir}"
+      if [[ ! -s $cache/p10k-instant-prompt-$(id -un).zsh ]]; then
+        bad="$sh warm-up produced no instant-prompt preamble"
+        break
+      fi
+    else
+      prompt_cache="$cache/p10k-bash-${USER:-$EUID}/prompt-${#dir}"
+    fi
+    if [[ ! -s $prompt_cache ]]; then
+      bad="$sh warm-up produced no prompt cache for $dir"
+      break
+    fi
+    if ! (cd "$dir" && tui-capture "$d/$sh.2.json" "$d/$sh.2" >"$d/$sh.2.log" 2>&1); then
+      bad="$sh prompt capture failed (see $d/$sh.2.log)"
+      break
+    fi
   done
+  if [[ -n $bad ]]; then
+    (( fail++ ))
+    echo "SETUP  $id : $bad"
+    continue
+  fi
   for s in instant real; do
     if [[ ! -f $d/zsh.2/$s.json || ! -f $d/bash.2/$s.json ]]; then bad+=" $s(missing)"
-    elif ! cmp -s <(cells "$d/zsh.2/$s.json") <(cells "$d/bash.2/$s.json"); then bad+=" $s"
+    elif ! normalise_snapshot "$d/zsh.2/$s.json" >"$d/zsh.2/$s.normalised" ||
+         ! normalise_snapshot "$d/bash.2/$s.json" >"$d/bash.2/$s.normalised"; then bad+=" $s(invalid capture)"
+    elif ! cmp -s "$d/zsh.2/$s.normalised" "$d/bash.2/$s.normalised"; then bad+=" $s"
     fi
   done
   # an instant prompt at all? (the screen during the sleep is not empty)
@@ -70,3 +108,4 @@ for c in "${cases[@]}"; do
   fi
 done
 echo "same: $pass   different: $fail"
+(( fail == 0 ))
