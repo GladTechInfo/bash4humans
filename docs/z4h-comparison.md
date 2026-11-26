@@ -56,7 +56,7 @@ b4h; **n/a** = specific to zsh/macOS/iTerm2, nothing to port; **b4h+** = b4h has
 | Ctrl+W, Alt+BS, Ctrl+Alt+BS, Ctrl+BS, Ctrl+H | delete word left (Ctrl+Alt+BS: shell word) | same set | same |
 | Alt+K | delete to line start | — (Ctrl+U does it) | partial |
 | Alt+J | clear the whole buffer | same | same |
-| Alt+O | stash the line into history, clear it (z4h-stash-buffer) | same | same |
+| Alt+O | stash the line in ephemeral history and clear it (z4h-stash-buffer) | keep the draft in this shell until it exits, and browse it with Up/Down | same for Up/Down |
 | Alt+M | accept the whole suggestion | same (ble.sh) | same |
 | Ctrl+/ , Shift+Tab / Alt+/ | undo / redo | same | same |
 | Ctrl+Space | expand aliases, globs, parameters in place | alias, `~`, `$NAME`/`${NAME}`, glob; `$(...)` and other expansions are left alone (they would run code) | partial (on purpose) |

@@ -72,6 +72,7 @@ _b4h_ps0_title='$(_b4h_title_ps0)'
 # PROMPT_COMMAND: shared history (ble.sh shares it itself), the terminal's
 # directory and title, and the notification after a long command.
 _b4h_precmd() {
+  _b4h_draft_browsing=0
   if (( ! _b4h_ble )) && [[ $B4H_HISTORY_SHARE == yes && -n ${HISTFILE-} && $HISTFILE != /dev/null ]]; then
     history -a; history -n
   fi

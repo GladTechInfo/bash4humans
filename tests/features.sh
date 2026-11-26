@@ -129,8 +129,30 @@ for e in ble readline; do
   if want alt-o; then
     # stash, the line is empty, run another command, Up Up brings it back
     run_screen alt-o "$e" 'echo stashed-2' '\eo' 'echo other-2\r' '\e[A' '\e[A' '\r'
-    grep -qx 'other-2' <<<"$SCREEN" && grep -qx 'stashed-2' <<<"$SCREEN"
-    check "alt-o $e" $? 'stashed line not back with Up'
+    grep -qx 'other-2' <<<"$SCREEN" && grep -qx 'stashed-2' <<<"$SCREEN" &&
+      grep -qx 'echo stashed-2' "$d/hist"
+    check "alt-o $e" $? 'stashed line did not return with Up and enter history once run'
+    run_screen alt-o-order "$e" 'echo order-older-2\r' 'echo order-draft-2' '\eo' \
+      'echo order-newer-2\r' '\e[A' '\e[A' '\e[B' '-down\r'
+    grep -qx 'order-newer-2-down' <<<"$SCREEN"
+    check "alt-o Up Up Down returns to the newer command $e" $? "$SCREEN"
+    run_screen alt-o-down "$e" 'echo draft-older-2' '\eo' 'echo between-2\r' \
+      'echo draft-newer-2' '\eo' 'draft-' '\e[A' '\e[A' '\e[B' '\r'
+    grep -qx 'draft-newer-2' <<<"$SCREEN" && ! grep -qx 'draft-older-2' <<<"$SCREEN"
+    check "alt-o prefix and Down $e" $? "$SCREEN"
+
+    # A trailing space keeps the Ctrl+J byte through run_screen's command substitution.
+    run_screen alt-o-multiline "$e" '\e[200~echo draft-first-2\necho draft-second-2\e[201~' \
+      '\eo' '\e[A' '\n '
+    grep -qx 'draft-first-2' <<<"$SCREEN" && grep -qx 'draft-second-2' <<<"$SCREEN"
+    check "alt-o multiline recall $e" $? "$SCREEN"
+
+    run_screen alt-o-private "$e" 'echo never-executed-2' '\eo' 'echo shared-command-2\r' 'history -a; history -w\r' \
+      "!bash --noprofile --norc -c 'history -r \"\$1\"; history' bash '$d/hist' > '$d/other-history'"
+    grep -q 'shared-command-2' "$d/hist" &&
+      grep -q 'shared-command-2' "$d/other-history" &&
+      ! grep -q 'never-executed-2' "$d/hist" "$d/other-history"
+    check "alt-o drafts stay out of shared history $e" $? 'draft leaked or the second shell did not read history'
   fi
 
   if want ctrl-space && [[ $e == ble || $e == readline ]]; then

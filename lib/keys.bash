@@ -11,7 +11,7 @@
 #    Ctrl+Left / Right      word left / right         Ctrl+Delete  delete word right
 #    Ctrl+Shift+Left/Right  shell word left / right   Ctrl+Shift+Delete  delete shell word right
 #    Ctrl+/ , Shift+Tab     undo                      Alt+/   redo (ble.sh)
-#    Alt+J                  clear the command line    Alt+O   stash it (back with Up)
+#    Alt+J                  clear the command line    Alt+O   stash a draft for Up/Down
 #    Ctrl+L / Ctrl+Alt+L    clear the screen: soft (into the scrollback) / hard (scrollback too)
 #    Ctrl+Space             expand the word: alias, ~, $VAR, glob
 #    Alt+Left / Right       previous / next directory
@@ -63,12 +63,120 @@ _b4h_key_clear() {
   for (( i = 0; i < ${#l[@]} - 1; i++ )); do printf '\e[2K%s\n' "${l[i]}"; done
 }
 
-# Alt+O (zsh4humans' z4h-stash-buffer): the line goes into the history
-# without running, and the line is cleared. Up brings it back.
+# Alt+O drafts stay outside the history list so history writes and imports
+# never see them. An anchor records the next history position at stash time.
+_b4h_drafts=()
+_b4h_draft_anchors=()
+_b4h_draft_browsing=0
+
+_b4h_draft_history_end() {
+  if (( _b4h_ble )); then
+    ble/history/initialize
+    ble/history/get-count -v REPLY || :
+  else
+    local last
+    last=$(HISTTIMEFORMAT= builtin history 1)
+    REPLY=1
+    [[ $last =~ ^[[:blank:]]*([0-9]+) ]] && REPLY=$(( BASH_REMATCH[1] + 1 ))
+  fi
+  return 0
+}
+
 _b4h_key_stash() {
   [[ -n $READLINE_LINE ]] || return 0
-  history -s -- "$READLINE_LINE"
+  local REPLY
+  _b4h_draft_history_end
+  _b4h_drafts+=("$READLINE_LINE")
+  _b4h_draft_anchors+=("$REPLY")
+  _b4h_draft_browsing=0
   READLINE_LINE= READLINE_POINT=0
+}
+
+_b4h_draft_start_browsing() {
+  local first=0 next oldest anchor i
+  _b4h_draft_history_end; next=$REPLY
+  if (( ! _b4h_ble )); then
+    IFS= read -r oldest < <(HISTTIMEFORMAT= builtin history) || :
+    first=$next
+    [[ $oldest =~ ^[[:blank:]]*([0-9]+) ]] && first=${BASH_REMATCH[1]}
+  fi
+  _b4h_draft_first=$first
+  _b4h_draft_end=$(( next + ${#_b4h_drafts[@]} ))
+  _b4h_draft_position=$_b4h_draft_end
+  _b4h_draft_original=$READLINE_LINE
+  _b4h_draft_original_point=$READLINE_POINT
+  _b4h_draft_query=${READLINE_LINE:0:READLINE_POINT}
+  _b4h_draft_slots=()
+  # Each older draft shifts subsequent positions by one. Clamp anchors
+  # to the current list if history was cleared or truncated.
+  for (( i = 0; i < ${#_b4h_drafts[@]}; i++ )); do
+    anchor=${_b4h_draft_anchors[i]}
+    (( anchor >= first )) || anchor=$first
+    (( anchor <= next )) || anchor=$next
+    _b4h_draft_slots+=("$(( anchor + i ))")
+    first=$anchor
+  done
+  _b4h_draft_browsing=1
+}
+
+_b4h_draft_history_entry() {
+  local event=$1
+  if (( _b4h_ble )); then
+    if [[ $B4H_HISTORY_LOCAL == yes ]] && (( ${_b4h_hist_foreign[event]-0} )); then
+      return 1
+    fi
+    ble/history/get-entry -v REPLY "$event"
+  else
+    # Fetch a block in one subprocess so a search over many entries does not
+    # fork for each command. NUL separates entries, including multiline ones.
+    if (( event < block_start || event >= block_start + ${#history_block[@]} )); then
+      block_start=$(( event / 64 * 64 ))
+      (( block_start >= _b4h_draft_first )) || block_start=$_b4h_draft_first
+      mapfile -d '' -t history_block < <(
+        histchars='!^#'
+        # Prevent history -p from removing recent entries from this copy.
+        # The placeholder is beyond the original end used by the loop.
+        set +o history
+        HISTFILE= HISTSIZE=-1 HISTCONTROL= HISTIGNORE=
+        builtin history -s -- ':' || exit 1
+        local n end=$(( _b4h_draft_end - ${#_b4h_drafts[@]} ))
+        for (( n = block_start; n < block_start + 64 && n < end; n++ )); do
+          builtin history -p "!$n" 2>/dev/null || :
+          printf '\0'
+        done
+      )
+    fi
+    REPLY=${history_block[event-block_start]-}
+    [[ $REPLY == *$'\n' ]] || return 1
+    REPLY=${REPLY%$'\n'}
+  fi
+}
+
+_b4h_draft_recall() {
+  local direction=$1 slot i REPLY block_start=0
+  local -a history_block=()
+  if (( ! _b4h_draft_browsing )) ||
+      [[ $READLINE_LINE != "$_b4h_draft_shown" || $READLINE_POINT != "$_b4h_draft_shown_point" ]]; then
+    _b4h_draft_start_browsing
+  fi
+  for (( slot = _b4h_draft_position + direction;
+         slot >= _b4h_draft_first && slot < _b4h_draft_end; slot += direction )); do
+    for (( i = 0; i < ${#_b4h_draft_slots[@]} && _b4h_draft_slots[i] < slot; i++ )); do :; done
+    if [[ ${_b4h_draft_slots[i]-} == "$slot" ]]; then
+      REPLY=${_b4h_drafts[i]}
+    else
+      _b4h_draft_history_entry "$(( slot - i ))" || continue
+    fi
+    [[ $REPLY == *"$_b4h_draft_query"* ]] || continue
+    _b4h_draft_position=$slot
+    READLINE_LINE=$REPLY READLINE_POINT=${#REPLY}
+    break
+  done
+  if (( direction > 0 && slot >= _b4h_draft_end )); then
+    _b4h_draft_position=$_b4h_draft_end
+    READLINE_LINE=$_b4h_draft_original READLINE_POINT=$_b4h_draft_original_point
+  fi
+  _b4h_draft_shown=$READLINE_LINE _b4h_draft_shown_point=$READLINE_POINT
 }
 
 # ---------------------------------------------------------- Ctrl+Space ---
@@ -238,11 +346,19 @@ if (( _b4h_ble )); then
   function ble/widget/b4h-clear-soft { _b4h_ble_clear soft; }
   function ble/widget/b4h-clear-hard { _b4h_ble_clear hard; }
 
-  # Alt+O: into ble.sh's own history list (ble.sh keeps it, not bash)
-  _b4h_key_stash_ble() {
-    [[ -n $READLINE_LINE ]] || return 0
-    ble/history/add "$READLINE_LINE"
-    READLINE_LINE= READLINE_POINT=0
+  function ble/widget/b4h-up-with-drafts {
+    if (( ${#_b4h_drafts[@]} )); then
+      ble/widget/.EDIT_COMMAND '_b4h_draft_recall -1'
+    else
+      ble/widget/b4h-up-local
+    fi
+  }
+  function ble/widget/b4h-down-with-drafts {
+    if (( ${#_b4h_drafts[@]} )); then
+      ble/widget/.EDIT_COMMAND '_b4h_draft_recall 1'
+    else
+      ble/widget/b4h-down-local
+    fi
   }
 
   _b4h_ble_keys() {
@@ -261,14 +377,14 @@ if (( _b4h_ble )); then
     ble-bind -f C-S-left   backward-sword
     ble-bind -f C-S-right  forward-sword
     ble-bind -f C-S-delete kill-forward-sword
-    ble-bind -f up       b4h-up-local
-    ble-bind -f down     b4h-down-local
+    ble-bind -f up       b4h-up-with-drafts
+    ble-bind -f down     b4h-down-with-drafts
     ble-bind -f C-up     b4h-up-global
     ble-bind -f C-down   b4h-down-global
     ble-bind -f M-j      b4h-kill-buffer
     ble-bind -f C-l      b4h-clear-soft
     ble-bind -f C-M-l    b4h-clear-hard
-    ble-bind -x M-o      _b4h_key_stash_ble
+    ble-bind -x M-o      _b4h_key_stash
     ble-bind -x C-@      _b4h_key_expand
     ble-bind -x C-SP     _b4h_key_expand
     ble-bind -f M-left   b4h-back
@@ -314,7 +430,17 @@ else
   bind '"\ej": kill-whole-line'
   # (only lower-case: Alt+Shift+O is ESC O, the start of arrow keys in
   # some terminal modes)
-  bind -x '"\eo": _b4h_key_stash'
+  _b4h_readline_stash() {
+    [[ -n $READLINE_LINE ]] || return 0
+    if (( ! ${#_b4h_drafts[@]} )); then
+      bind -x '"\e[A": _b4h_draft_recall -1'
+      bind -x '"\eOA": _b4h_draft_recall -1'
+      bind -x '"\e[B": _b4h_draft_recall 1'
+      bind -x '"\eOB": _b4h_draft_recall 1'
+    fi
+    _b4h_key_stash
+  }
+  bind -x '"\eo": _b4h_readline_stash'
   bind -x '"\C-@": _b4h_key_expand'
   bind -x '"\e[1;3D": _b4h_key_back'
   bind -x '"\e[1;3C": _b4h_key_forward'
