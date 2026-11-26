@@ -1,6 +1,6 @@
 [package]
 name = "b4h-tool"
-version = "0.3.8"
+version = "0.3.9"
 edition = "2021"
 description = "Helper for bash4humans: zmv-style bulk rename and 'did you mean' suggestions"
 license = "GPL-3.0-or-later"
