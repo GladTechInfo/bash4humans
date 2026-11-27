@@ -5,6 +5,8 @@
 # Configurations are templates plus a few settings; keys are typed into both
 # shells (steps separated by \x1e, golden.sh waits after each).
 T=${B4H_TEST_DIR:-/tmp/b4h-test}; C=$T/blecfg; mkdir -p "$C"
+mkdir -p "$T/golden"
+export GOLDEN_TTY_AGE=-1
 root=$(cd "${BASH_SOURCE[0]%/*}/../.." && pwd)
 "$root/tests/p10k/make-lang-fixtures.sh" "$T/lang" >/dev/null   # kubectl fixture
 mk() {  # mk NAME TEMPLATE LINES...  -> $C/NAME.zsh and $C/NAME.bash
@@ -59,3 +61,4 @@ for c in "${cases[@]}"; do
   fi
 done
 echo "same: $pass   different: $fail"
+(( fail == 0 ))

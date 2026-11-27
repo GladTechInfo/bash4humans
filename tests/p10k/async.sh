@@ -6,6 +6,8 @@
 # daemon answers both shells redraw the prompt with the fresh status.
 # Each shell starts on fresh copies of the repositories (GOLDEN_PRE).
 T=${B4H_TEST_DIR:-/tmp/b4h-test}; A=$T/async
+mkdir -p "$T/golden"
+export GOLDEN_TTY_AGE=-1
 root=$(cd "${BASH_SOURCE[0]%/*}/../.." && pwd)
 "$root/tests/p10k/make-git-fixtures.sh" "$T/git" >/dev/null
 mkdir -p "$A/bin"; cp "$root/tests/p10k/gs-hold" "$A/bin/"; chmod +x "$A/bin/gs-hold"
@@ -30,10 +32,22 @@ pass=0 fail=0
 for c in "${cases[@]}"; do
   IFS='|' read -r id tpl keys <<<"$c"
   [[ -n ${1-} && $id != *$1* ]] && continue
-  if BLE=1 GOLDEN_PRE=$pre GOLDEN_ENV="PATH=$A/bin:$PATH" \
+  require_hold=''
+  [[ $keys != *gs-hold* ]] || require_hold=1
+  if GOLDEN_REQUIRE_HOLD=$require_hold BLE=1 GOLDEN_PRE=$pre GOLDEN_ENV="PATH=$A/bin:$PATH" \
        "$root/tests/p10k/golden.sh" "async-$id" "$HOME/src/powerlevel10k/config/p10k-$tpl.zsh" \
        "$root/p10k/config/p10k-$tpl.bash" "$A/repo" 100 8 "$keys" >"$T/golden/async-$id.log" 2>&1; then
-    (( pass++ )); echo "SAME  $id"
+    # Equal screens alone can pass when neither shell draws a Git segment.
+    expected=''
+    case $id in
+      hold-cd) expected='other loading' ;;
+      hold-cd-resume) expected='main +1 !1 ?2' ;;
+    esac
+    if [[ -n $expected ]] && ! grep -Fq "$expected" "$T/golden/async-$id/bash.txt"; then
+      (( fail++ )); echo "DIFF  $id: expected '$expected'"
+    else
+      (( pass++ )); echo "SAME  $id"
+    fi
   else
     (( fail++ )); echo "DIFF  $id  $(sed -n 1p "$T/golden/async-$id.log" | grep -o '([0-9]* cells)')"
   fi
@@ -78,3 +92,4 @@ for c in "${cases2[@]}"; do
   fi
 done
 echo "same: $pass   different: $fail"
+(( fail == 0 ))

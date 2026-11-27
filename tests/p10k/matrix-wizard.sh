@@ -1,7 +1,8 @@
 #!/bin/bash
 # tests/p10k/matrix-wizard.sh [FILTER] : configs made by the real p10k wizard, converted
 # to bash, compared with real p10k in two repositories.
-T=${B4H_TEST_DIR:-/tmp/b4h-test}; W=$T/wz; mkdir -p "$W"
+T=${B4H_TEST_DIR:-/tmp/b4h-test}; W=$T/wz; mkdir -p "$W" "$T/golden"
+export GOLDEN_TTY_AGE=-1
 root=$(cd "${BASH_SOURCE[0]%/*}/../.." && pwd)
 "$root/tests/p10k/make-git-fixtures.sh" "$T/git" >/dev/null
 declare -a combos=(
@@ -29,10 +30,12 @@ pass=0 fail=0
 for c in "${combos[@]}"; do
   id=${c%%|*} opts=${c#*|}
   [[ -n ${1-} && $id != *$1* ]] && continue
-  if [[ ! -s $W/$id.zsh ]]; then
-    "$root/tests/p10k/wizard-real.sh" "$W/$id.zsh" $opts >"$W/$id.gen.log" 2>&1 || { echo "GEN-FAIL $id"; (( fail++ )); continue; }
+  tc=0
+  [[ $id == P4 ]] && tc=1
+  if [[ $id == P* || ! -s $W/$id.zsh ]]; then
+    TRUECOLOR=$tc "$root/tests/p10k/wizard-real.sh" "$W/$id.zsh" $opts >"$W/$id.gen.log" 2>&1 || { echo "GEN-FAIL $id"; (( fail++ )); continue; }
   fi
-  "$HOME/.cache/bash4humans/deps/bin/b4h-tool" p10k-config "$W/$id.zsh" "$W/$id.bash" 2>"$W/$id.conv.log" || { echo "CONV-FAIL $id"; cat "$W/$id.conv.log"; }
+  "$HOME/.cache/bash4humans/deps/bin/b4h-tool" p10k-config "$W/$id.zsh" "$W/$id.bash" 2>"$W/$id.conv.log" || { echo "CONV-FAIL $id"; cat "$W/$id.conv.log"; (( fail++ )); continue; }
   mask=''; [[ $opts == *time=[12]* ]] && mask=1
   for repo in ahead dirty; do
     if MASK_DIGITS=$mask "$root/tests/p10k/golden.sh" "wz-$id-$repo" "$W/$id.zsh" "$W/$id.bash" "$T/git/$repo" 100 8 \
@@ -44,3 +47,4 @@ for c in "${combos[@]}"; do
   done
 done
 echo "same: $pass   different: $fail"
+(( fail == 0 ))

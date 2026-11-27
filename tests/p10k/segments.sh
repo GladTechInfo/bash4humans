@@ -4,9 +4,15 @@
 # bash) are put before the template, the segments become the right prompt.
 # Each case runs with the rainbow and the lean template.
 T=${B4H_TEST_DIR:-/tmp/b4h-test}; S=$T/seg; mkdir -p "$S" "$T/golden"
+export GOLDEN_TTY_AGE=-1
 root=$(cd "${BASH_SOURCE[0]%/*}/../.." && pwd)
 : >"$T/hist-empty"
-L=$T/lang; "$root/tests/p10k/make-lang-fixtures.sh" "$L" >/dev/null
+# Anchor the private fixture tree so unrelated siblings in /tmp cannot
+# change a shortest-unique path between the two captures.
+fixture=$(mktemp -d /tmp/b4h-fixture.XXXXXXXX) || exit 1
+trap 'rm -rf -- "$fixture"' EXIT
+: >"$fixture/.shorten_folder_marker"
+L=$fixture/lang; "$root/tests/p10k/make-lang-fixtures.sh" "$L" >/dev/null || exit 1
 # lines shared by the language cases: fake tools first on PATH, *_ROOT dirs
 LP="export PATH=$L/bin:\$PATH HOME_FIX=$L/home RBENV_ROOT=$L/home/.rbenv GOENV_ROOT=$L/home/.goenv NODENV_ROOT=$L/home/.nodenv JENV_ROOT=$L/home/.jenv LUAENV_ROOT=$L/home/.luaenv PLENV_ROOT=$L/home/.plenv PHPENV_ROOT=$L/home/.phpenv SCALAENV_ROOT=$L/home/.scalaenv PYENV_ROOT=$L/home/.pyenv"
 # Case fields: NAME|SEGMENTS|SHELL LINES|m (mask digits)|DIRECTORY|ENVIRONMENT
@@ -129,4 +135,16 @@ for c in "${cases[@]}"; do
     fi
   done
 done
+for tty in new old; do
+  [[ -z ${1-} || tty-$tty == *"$1"* ]] || continue
+  age=-1 row=1
+  [[ $tty != old ]] || { age=0; row=2; }
+  if GOLDEN_TTY_AGE=$age GOLDEN_FIRST_ROW=$row "$root/tests/p10k/golden.sh" "tty-$tty" \
+       "$HOME/src/powerlevel10k/config/p10k-lean.zsh" "$root/p10k/config/p10k-lean.bash" /tmp; then
+    (( pass++ ))
+  else
+    (( fail++ ))
+  fi
+done
 echo "same: $pass   different: $fail"
+(( fail == 0 ))

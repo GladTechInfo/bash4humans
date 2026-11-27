@@ -16,9 +16,12 @@ for pid in $(pgrep -s "$sid" gitstatusd); do
   elif [[ -n $g && " $pgids " != *" -$g "* ]]; then pgids+=" -$g"
   fi
 done
-[[ -n $pgids ]] || exit 0
+if [[ -z $pgids ]]; then
+  echo "gs-hold: no gitstatusd in the terminal session" >&2
+  exit 1
+fi
 # shellcheck disable=SC2086
-kill -STOP -- $pgids
+kill -STOP -- $pgids || exit 1
 # a detached timer: no job-control messages in either shell
 setsid -f sh -c "sleep $secs; kill -CONT -- $pgids" >/dev/null 2>&1 </dev/null
-exit 0
+[[ -z ${GS_HOLD_MARKER-} ]] || : >"$GS_HOLD_MARKER"
